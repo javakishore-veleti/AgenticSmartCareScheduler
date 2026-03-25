@@ -2,7 +2,7 @@ spring:
   application:
     name: AgenticSmartCareScheduler
   datasource:
-    url: jdbc:h2:mem:agenticcare
+    url: jdbc:h2:mem:agenticcare;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS smartcare_admin_db
     driver-class-name: org.h2.Driver
     username: sa
     password:
