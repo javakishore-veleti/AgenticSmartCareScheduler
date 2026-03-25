@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.6</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.agenticcare</groupId>
+    <artifactId>agentic-smart-care-scheduler</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>AgenticSmartCareScheduler</name>
+    <description>Cloud-native multi-agent AI orchestration for context-aware healthcare appointment coordination</description>
+
+    <properties>
+        <java.version>17</java.version>
+        <spring-ai.version>1.0.0</spring-ai.version>
+        <springdoc.version>2.8.6</springdoc.version>
+        <lombok.version>1.18.36</lombok.version>
+    </properties>
+
+    <modules>
+        <module>app-common</module>
+        <module>app-dao</module>
+        <module>app-core</module>
+        <module>app-web</module>
+        <module>app-wfs</module>
+        <module>app-cloud-aws-wfs</module>
+        <module>app-cloud-aws-ai</module>
+        <module>app-cloud-aws-bedrock</module>
+        <module>app-cloud-aws-ml</module>
+        <module>app-cloud-aws-agents</module>
+        <module>app-agent-patient</module>
+        <module>app-agent-communication</module>
+        <module>app-agent-provider</module>
+        <module>app-agent-resource</module>
+        <module>app-agent-audit</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Internal modules -->
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-dao</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-wfs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-cloud-aws-wfs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-cloud-aws-ai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-cloud-aws-bedrock</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-cloud-aws-ml</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-cloud-aws-agents</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-agent-patient</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-agent-communication</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-agent-provider</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-agent-resource</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-agent-audit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
+
+</project>
