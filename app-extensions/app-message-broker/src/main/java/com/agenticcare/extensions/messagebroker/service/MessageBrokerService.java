@@ -3,6 +3,7 @@ package com.agenticcare.extensions.messagebroker.service;
 import com.agenticcare.extensions.messagebroker.dto.MessagePublishReqDto;
 import com.agenticcare.extensions.messagebroker.dto.MessageRespDto;
 import com.agenticcare.extensions.messagebroker.entity.MessageQueueEntity;
+import java.util.Map;
 import com.agenticcare.extensions.messagebroker.repository.MessageQueueRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -24,6 +25,31 @@ public class MessageBrokerService {
 
     public MessageBrokerService(MessageQueueRepository repo) {
         this.repo = repo;
+    }
+
+    public List<Map<String, Object>> getTopics() {
+        List<Object[]> rows = repo.countByQueueNameAndStatus();
+        java.util.LinkedHashMap<String, Map<String, Object>> topicMap = new java.util.LinkedHashMap<>();
+        for (Object[] row : rows) {
+            String queue = (String) row[0];
+            String status = (String) row[1];
+            Long count = (Long) row[2];
+            topicMap.computeIfAbsent(queue, k -> {
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("topicName", k); m.put("pending", 0L); m.put("processing", 0L);
+                m.put("completed", 0L); m.put("failed", 0L); m.put("total", 0L);
+                return m;
+            });
+            Map<String, Object> t = topicMap.get(queue);
+            t.put(status.toLowerCase(), count);
+            t.put("total", (Long) t.get("total") + count);
+        }
+        return new java.util.ArrayList<>(topicMap.values());
+    }
+
+    public List<MessageRespDto> getMessagesByTopic(String queueName) {
+        return repo.findByQueueNameOrderBySequenceNumberDesc(queueName).stream()
+                .map(this::toDto).collect(Collectors.toList());
     }
 
     @Transactional

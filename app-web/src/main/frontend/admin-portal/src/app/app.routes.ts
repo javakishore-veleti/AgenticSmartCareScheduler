@@ -7,6 +7,8 @@ import { DatasetsComponent } from './pages/datasets/datasets.component';
 import { DatasetInstancesComponent } from './pages/dataset-instances/dataset-instances.component';
 import { DatasetInstanceViewComponent } from './pages/dataset-instance-view/dataset-instance-view.component';
 import { DigitalTwinComponent } from './pages/digital-twin/digital-twin.component';
+import { MessagesTopicsComponent } from './pages/messages-topics/messages-topics.component';
+import { MessagesDetailComponent } from './pages/messages-detail/messages-detail.component';
 import { AuditComponent } from './pages/audit/audit.component';
 import { SecretsComponent } from './pages/secrets/secrets.component';
 import { SecretEditComponent } from './pages/secret-edit/secret-edit.component';
@@ -23,6 +25,8 @@ export const routes: Routes = [
   { path: 'digital-twin', component: DigitalTwinComponent },
   { path: 'secrets', component: SecretsComponent },
   { path: 'secrets/:id/edit', component: SecretEditComponent },
+  { path: 'messages', component: MessagesTopicsComponent },
+  { path: 'messages/:topicName', component: MessagesDetailComponent },
   { path: 'audit', component: AuditComponent },
   { path: 'settings', component: SettingsComponent },
   { path: '**', redirectTo: '' }

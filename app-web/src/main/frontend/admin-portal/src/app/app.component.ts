@@ -52,6 +52,9 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
             <a routerLink="/digital-twin" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
               <i class="bi bi-diagram-3 me-2" style="color:#e11d48;"></i><span class="fw-semibold">Digital Twin</span>
             </a>
+            <a routerLink="/messages" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
+              <i class="bi bi-envelope-paper me-2" style="color:#ea580c;"></i><span class="fw-semibold">Messages</span>
+            </a>
             <a routerLink="/audit" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
               <i class="bi bi-journal-check me-2" style="color:#0d9488;"></i><span class="fw-semibold">Audit Log</span>
             </a>

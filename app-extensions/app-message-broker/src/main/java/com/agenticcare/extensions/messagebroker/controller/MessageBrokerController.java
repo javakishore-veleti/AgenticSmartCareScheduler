@@ -19,6 +19,16 @@ public class MessageBrokerController {
         this.service = service;
     }
 
+    @GetMapping("/topics")
+    public ResponseEntity<List<Map<String, Object>>> getTopics() {
+        return ResponseEntity.ok(service.getTopics());
+    }
+
+    @GetMapping("/topic/{queueName}")
+    public ResponseEntity<List<MessageRespDto>> getMessagesByTopic(@PathVariable String queueName) {
+        return ResponseEntity.ok(service.getMessagesByTopic(queueName));
+    }
+
     @PostMapping("/publish")
     public ResponseEntity<MessageRespDto> publish(@RequestBody MessagePublishReqDto req) {
         return ResponseEntity.ok(service.publish(req));

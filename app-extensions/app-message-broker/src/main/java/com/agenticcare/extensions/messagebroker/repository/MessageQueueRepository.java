@@ -12,4 +12,9 @@ public interface MessageQueueRepository extends JpaRepository<MessageQueueEntity
 
     @Query("SELECT COALESCE(MAX(m.sequenceNumber), 0) FROM MessageQueueEntity m WHERE m.queueName = :queueName")
     Long findMaxSequenceByQueueName(String queueName);
+
+    @Query("SELECT m.queueName, m.status, COUNT(m) FROM MessageQueueEntity m GROUP BY m.queueName, m.status")
+    List<Object[]> countByQueueNameAndStatus();
+
+    List<MessageQueueEntity> findByQueueNameOrderBySequenceNumberDesc(String queueName);
 }
