@@ -1,0 +1,33 @@
+{
+  "model": "XGBoost",
+  "dataset": "Medical Appointment No-Show (Kaggle)",
+  "records": 71959,
+  "no_show_rate": 28.5,
+  "cv_folds": 5,
+  "f1_macro": 0.4541,
+  "auc_roc": 0.6106,
+  "precision_macro": 0.6065,
+  "recall_macro": 0.5123,
+  "confusion_matrix": [
+    [
+      50555,
+      882
+    ],
+    [
+      19664,
+      858
+    ]
+  ],
+  "features": [
+    "Age",
+    "Scholarship",
+    "Hipertension",
+    "Diabetes",
+    "Alcoholism",
+    "Handcap",
+    "SMS_received",
+    "LeadTimeDays",
+    "DayOfWeek",
+    "Hour"
+  ]
+}

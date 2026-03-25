@@ -6,8 +6,9 @@
     "install:customer": "cd app-web/src/main/frontend/customer-portal && npm install",
     "install:admin": "cd app-web/src/main/frontend/admin-portal && npm install",
     "install:ui": "npm run install:customer && npm run install:admin",
-    "install:python": "cd python && pip install -r requirements.txt",
-    "install:all": "npm run install:ui && npm run install:python",
+    "setup:conda": "conda create -n smartcare-analytics python=3.12 -y",
+    "install:analytics": "conda run -n smartcare-analytics python -m pip install -r DataManagement/requirements.txt",
+    "install:all": "npm run install:ui && npm run install:analytics",
 
     "prebuild:ui": "rm -rf app-web/src/main/resources/static/portal && mkdir -p app-web/src/main/resources/static/portal/customer app-web/src/main/resources/static/portal/admin",
     "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build --base-href /portal/customer/ && cp -r dist/customer-portal/browser/* ../../resources/static/portal/customer/",
@@ -26,8 +27,12 @@
     "dev:admin": "concurrently \"npm run start:spring\" \"npm run start:ui:admin\"",
 
     "test:java": "mvn test",
-    "test:python": "cd python && pytest",
-    "test:all": "npm run test:java && npm run test:python",
+    "test:analytics": "conda run -n smartcare-analytics python -m pytest DataManagement/",
+    "test:all": "npm run test:java && npm run test:analytics",
+
+    "analytics:train": "conda run -n smartcare-analytics python DataManagement/Analytics/ML/train_risk_model.py",
+    "analytics:context": "conda run -n smartcare-analytics python DataManagement/Analytics/ML/context_state_simulator.py",
+    "analytics:run-all": "npm run analytics:train && npm run analytics:context",
 
     "lint:customer": "cd app-web/src/main/frontend/customer-portal && ng lint",
     "lint:admin": "cd app-web/src/main/frontend/admin-portal && ng lint",
