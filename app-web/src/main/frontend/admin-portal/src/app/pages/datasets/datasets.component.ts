@@ -152,14 +152,23 @@ export class DatasetsComponent implements OnInit {
   constructor(private datasetService: DatasetService) {}
 
   ngOnInit() {
+    console.log('[DatasetsComponent] ngOnInit called');
     this.loadDatasets();
   }
 
   loadDatasets() {
     this.loading = true;
+    console.log('[DatasetsComponent] calling getAllDatasets...');
     this.datasetService.getAllDatasets().subscribe({
-      next: (data) => { this.datasets = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: (data) => {
+        console.log('[DatasetsComponent] SUCCESS, data:', data);
+        this.datasets = data;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('[DatasetsComponent] ERROR:', err);
+        this.loading = false;
+      }
     });
   }
 
