@@ -5,20 +5,49 @@
   "scripts": {
     "install:customer": "cd app-web/src/main/frontend/customer-portal && npm install",
     "install:admin": "cd app-web/src/main/frontend/admin-portal && npm install",
-    "install:all": "npm run install:customer && npm run install:admin",
+    "install:ui": "npm run install:customer && npm run install:admin",
+    "install:python": "cd python && pip install -r requirements.txt",
+    "install:all": "npm run install:ui && npm run install:python",
+
     "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build --output-path=../../../resources/static/portal/customer",
     "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build --output-path=../../../resources/static/portal/admin",
     "build:ui": "npm run build:customer && npm run build:admin",
     "build:java": "mvn clean package -DskipTests",
     "build:all": "npm run build:ui && npm run build:java",
+
     "start:ui:customer": "cd app-web/src/main/frontend/customer-portal && ng serve --port 4200",
     "start:ui:admin": "cd app-web/src/main/frontend/admin-portal && ng serve --port 4201",
     "start:spring": "mvn -pl app-web spring-boot:run",
     "start": "npm run build:ui && npm run start:spring",
+
+    "dev": "concurrently \"npm run start:spring\" \"npm run start:ui:customer\" \"npm run start:ui:admin\"",
     "dev:customer": "concurrently \"npm run start:spring\" \"npm run start:ui:customer\"",
     "dev:admin": "concurrently \"npm run start:spring\" \"npm run start:ui:admin\"",
+
     "test:java": "mvn test",
-    "clean": "mvn clean && rm -rf app-web/src/main/resources/static/portal"
+    "test:python": "cd python && pytest",
+    "test:all": "npm run test:java && npm run test:python",
+
+    "lint:customer": "cd app-web/src/main/frontend/customer-portal && ng lint",
+    "lint:admin": "cd app-web/src/main/frontend/admin-portal && ng lint",
+    "lint:ui": "npm run lint:customer && npm run lint:admin",
+
+    "clean:ui": "rm -rf app-web/src/main/resources/static/portal",
+    "clean:java": "mvn clean",
+    "clean": "npm run clean:java && npm run clean:ui",
+
+    "docker:up": "bash DevOps/Local/docker-all-up.sh",
+    "docker:down": "bash DevOps/Local/docker-all-down.sh",
+    "docker:status": "bash DevOps/Local/docker-all-status.sh",
+
+    "infra:bootstrap": "gh workflow run bootstrap-infra.yml",
+    "infra:deploy": "gh workflow run deploy-agents.yml",
+    "infra:shutdown": "gh workflow run shutdown-infra.yml",
+
+    "scenario:run": "gh workflow run run-scenario.yml",
+    "analytics:extract": "gh workflow run extract-analytics.yml",
+
+    "all": "npm run install:all && npm run build:all && npm run test:all"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
