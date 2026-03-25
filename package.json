@@ -9,8 +9,8 @@
     "install:python": "cd python && pip install -r requirements.txt",
     "install:all": "npm run install:ui && npm run install:python",
 
-    "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build --output-path=../../../resources/static/portal/customer",
-    "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build --output-path=../../../resources/static/portal/admin",
+    "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build && cp -r dist/customer-portal/browser/* ../../../../main/resources/static/portal/customer/",
+    "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build && cp -r dist/admin-portal/browser/* ../../../../main/resources/static/portal/admin/",
     "build:ui": "npm run build:customer && npm run build:admin",
     "build:java": "mvn clean install -DskipTests",
     "build:all": "npm run build:ui && npm run build:java",
