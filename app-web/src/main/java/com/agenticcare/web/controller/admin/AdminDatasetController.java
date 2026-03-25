@@ -50,9 +50,11 @@ public class AdminDatasetController {
     }
 
     @PostMapping("/{datasetCode}/ingest")
-    @Operation(summary = "Ingest a dataset to local storage")
-    public ResponseEntity<DatasetDetailsRespDto> ingestDataset(@PathVariable String datasetCode) {
-        log.info(">>> POST /datasets/{}/ingest called", datasetCode);
-        return ResponseEntity.ok(datasetService.ingestDataset(datasetCode));
+    @Operation(summary = "Ingest a dataset to a storage target")
+    public ResponseEntity<DatasetDetailsRespDto> ingestDataset(
+            @PathVariable String datasetCode,
+            @RequestBody(required = false) com.agenticcare.common.dto.admin.DatasetIngestReqDto req) {
+        log.info(">>> POST /datasets/{}/ingest called, storageType={}", datasetCode, req != null ? req.getStorageType() : "default");
+        return ResponseEntity.ok(datasetService.ingestDataset(datasetCode, req));
     }
 }

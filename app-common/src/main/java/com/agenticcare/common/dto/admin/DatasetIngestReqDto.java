@@ -1,15 +1,14 @@
 package com.agenticcare.common.dto.admin;
 
-import com.agenticcare.common.enums.DatasetFormat;
-import com.agenticcare.common.enums.DatasetStorageType;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 public class DatasetIngestReqDto {
-    private String datasetCode;
-    private DatasetStorageType storageType;
-    private DatasetFormat format;
-    private String storageLocationHint;
+    private String storageType;      // LOCAL_FILESYSTEM, AWS_S3
+    private String localBasePath;    // for LOCAL_FILESYSTEM
+    private String s3Bucket;         // for AWS_S3
+    private String s3Prefix;         // for AWS_S3
+    private String awsRegion;        // for AWS_S3
 }

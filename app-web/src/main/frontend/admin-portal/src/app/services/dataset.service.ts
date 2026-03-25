@@ -50,7 +50,7 @@ export class DatasetService {
     return this.http.post(`${this.baseUrl}/seed-defaults`, {});
   }
 
-  ingestDataset(datasetCode: string): Observable<DatasetDetails> {
-    return this.http.post<DatasetDetails>(`${this.baseUrl}/${datasetCode}/ingest`, {});
+  ingestDataset(datasetCode: string, config?: any): Observable<DatasetDetails> {
+    return this.http.post<DatasetDetails>(`${this.baseUrl}/${datasetCode}/ingest`, config || {});
   }
 }

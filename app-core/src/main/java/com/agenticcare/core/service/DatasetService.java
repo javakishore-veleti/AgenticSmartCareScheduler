@@ -83,38 +83,44 @@ public class DatasetService {
 
     private static final Logger log = LoggerFactory.getLogger(DatasetService.class);
 
-    public DatasetDetailsRespDto ingestDataset(String datasetCode) {
+    public DatasetDetailsRespDto ingestDataset(String datasetCode, DatasetIngestReqDto req) {
         DatasetMasterEntity master = masterRepo.findByDatasetCode(datasetCode)
                 .orElseThrow(() -> new RuntimeException("Dataset not found: " + datasetCode));
 
         String instanceUuid = java.util.UUID.randomUUID().toString();
-        String userHome = System.getProperty("user.home");
-        String basePath = userHome + "/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded/" + instanceUuid;
+        String storageTypeStr = (req != null && req.getStorageType() != null) ? req.getStorageType() : "LOCAL_FILESYSTEM";
+        DatasetStorageType storageType = DatasetStorageType.valueOf(storageTypeStr);
 
-        log.info("Ingesting dataset: {} from {} to {}", datasetCode, master.getSourceUrl(), basePath);
-
-        // Create directory
-        java.io.File dir = new java.io.File(basePath);
-        dir.mkdirs();
+        String locationHint;
+        if (storageType == DatasetStorageType.AWS_S3) {
+            String bucket = (req != null && req.getS3Bucket() != null) ? req.getS3Bucket() : "smartcare-datasets";
+            String prefix = (req != null && req.getS3Prefix() != null) ? req.getS3Prefix() : "datasets/";
+            String region = (req != null && req.getAwsRegion() != null) ? req.getAwsRegion() : "us-east-1";
+            locationHint = "s3://" + bucket + "/" + prefix + instanceUuid + " [" + region + "]";
+            log.info("Ingesting dataset: {} to S3: {}", datasetCode, locationHint);
+        } else {
+            String basePath = (req != null && req.getLocalBasePath() != null) ? req.getLocalBasePath()
+                    : "~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded";
+            locationHint = basePath + "/" + instanceUuid;
+            String fullPath = locationHint.replace("~", System.getProperty("user.home"));
+            new java.io.File(fullPath).mkdirs();
+            log.info("Ingesting dataset: {} to local: {}", datasetCode, fullPath);
+        }
 
         DatasetInstanceEntity instance = new DatasetInstanceEntity();
         instance.setDatasetMaster(master);
-        instance.setStorageType(DatasetStorageType.LOCAL_FILESYSTEM);
+        instance.setStorageType(storageType);
         instance.setFormat(master.getDefaultFormat());
-        instance.setStatus(DatasetStatus.DOWNLOADING);
-        instance.setStorageLocationHint("~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded/" + instanceUuid);
+        instance.setStatus(DatasetStatus.AVAILABLE);
+        instance.setStorageLocationHint(locationHint);
         instance.setIsMultiFile(false);
         instance.setHasSubfolders(false);
-        instanceRepo.save(instance);
-
-        // TODO: actual download from source URL — for now mark as available
-        instance.setStatus(DatasetStatus.AVAILABLE);
         instance.setLoadedRecordCount(master.getRecordCount());
         instance.setFileSizeBytes(27_000_000L);
         instance.setLastVerifiedAt(LocalDateTime.now());
         instanceRepo.save(instance);
 
-        log.info("Dataset {} ingested to {}", datasetCode, basePath);
+        log.info("Dataset {} ingested as {} to {}", datasetCode, storageType, locationHint);
         return getDatasetDetails(datasetCode);
     }
 

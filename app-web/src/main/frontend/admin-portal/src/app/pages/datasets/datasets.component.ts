@@ -1,11 +1,20 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { DatasetService, DatasetDetails } from '../../services/dataset.service';
+
+interface IngestConfig {
+  storageType: string;
+  localBasePath: string;
+  s3Bucket: string;
+  s3Prefix: string;
+  awsRegion: string;
+}
 
 @Component({
   selector: 'app-datasets',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h2 class="fw-bold" style="color: #4f46e5;">
@@ -59,12 +68,58 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
             <i class="bi" [class.bi-check-circle]="ds.instances.length > 0" [class.bi-x-circle]="ds.instances.length === 0"></i>
             {{ ds.instances.length > 0 ? ds.instances.length + ' instance(s)' : 'Not ingested' }}
           </span>
-          <button *ngIf="ds.instances.length === 0" class="btn btn-sm ms-2"
+          <button class="btn btn-sm ms-2"
                   style="background: linear-gradient(135deg, #0d9488, #4f46e5); color: white; border-radius: 8px;"
-                  (click)="ingestDataset(ds.datasetCode)" [disabled]="ingesting[ds.datasetCode]">
-            <i class="bi bi-cloud-download me-1"></i>
-            {{ ingesting[ds.datasetCode] ? 'Ingesting...' : 'Ingest Dataset' }}
+                  (click)="toggleIngestPanel(ds.datasetCode)">
+            <i class="bi bi-plus-circle me-1"></i>Ingest Dataset
           </button>
+        </div>
+      </div>
+      <!-- Ingest Panel -->
+      <div *ngIf="showIngestPanel[ds.datasetCode]" class="card-body border-top" style="background: #f8f9fa;">
+        <h6 class="fw-bold" style="color: #4f46e5;"><i class="bi bi-arrow-down-circle me-2"></i>Ingest to Storage</h6>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Storage Type</label>
+            <select class="form-select form-select-sm" [(ngModel)]="ingestConfig[ds.datasetCode].storageType"
+                    (change)="onStorageTypeChange(ds.datasetCode)">
+              <option value="LOCAL_FILESYSTEM">Local Filesystem</option>
+              <option value="AWS_S3">AWS S3</option>
+            </select>
+          </div>
+          <!-- Local Filesystem fields -->
+          <ng-container *ngIf="ingestConfig[ds.datasetCode].storageType === 'LOCAL_FILESYSTEM'">
+            <div class="col-md-5">
+              <label class="form-label small fw-semibold">Base Path</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="ingestConfig[ds.datasetCode].localBasePath"
+                     placeholder="~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded">
+            </div>
+          </ng-container>
+          <!-- AWS S3 fields -->
+          <ng-container *ngIf="ingestConfig[ds.datasetCode].storageType === 'AWS_S3'">
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">S3 Bucket</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="ingestConfig[ds.datasetCode].s3Bucket"
+                     placeholder="smartcare-datasets">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">S3 Prefix</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="ingestConfig[ds.datasetCode].s3Prefix"
+                     placeholder="datasets/">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">AWS Region</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="ingestConfig[ds.datasetCode].awsRegion"
+                     placeholder="us-east-1">
+            </div>
+          </ng-container>
+          <div class="col-md-2">
+            <button class="btn btn-sm w-100" style="background: #0d9488; color: white; border-radius: 8px;"
+                    (click)="ingestDataset(ds.datasetCode)" [disabled]="ingesting[ds.datasetCode]">
+              <i class="bi bi-play-fill me-1"></i>
+              {{ ingesting[ds.datasetCode] ? 'Ingesting...' : 'Start Ingest' }}
+            </button>
+          </div>
         </div>
       </div>
       <div class="card-body">
@@ -155,6 +210,8 @@ export class DatasetsComponent implements OnInit {
   seeding = false;
   seedMessage = '';
   ingesting: { [key: string]: boolean } = {};
+  showIngestPanel: { [key: string]: boolean } = {};
+  ingestConfig: { [key: string]: IngestConfig } = {};
 
   constructor(private datasetService: DatasetService, private cdr: ChangeDetectorRef) {}
 
@@ -201,11 +258,30 @@ export class DatasetsComponent implements OnInit {
     });
   }
 
+  toggleIngestPanel(datasetCode: string) {
+    this.showIngestPanel[datasetCode] = !this.showIngestPanel[datasetCode];
+    if (!this.ingestConfig[datasetCode]) {
+      this.ingestConfig[datasetCode] = {
+        storageType: 'LOCAL_FILESYSTEM',
+        localBasePath: '~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded',
+        s3Bucket: '',
+        s3Prefix: 'datasets/',
+        awsRegion: 'us-east-1'
+      };
+    }
+    this.cdr.detectChanges();
+  }
+
+  onStorageTypeChange(datasetCode: string) {
+    this.cdr.detectChanges();
+  }
+
   ingestDataset(datasetCode: string) {
     this.ingesting[datasetCode] = true;
     this.cdr.detectChanges();
-    console.log('[DatasetsComponent] ingesting', datasetCode);
-    this.datasetService.ingestDataset(datasetCode).subscribe({
+    const config = this.ingestConfig[datasetCode] || {};
+    console.log('[DatasetsComponent] ingesting', datasetCode, 'config:', config);
+    this.datasetService.ingestDataset(datasetCode, config).subscribe({
       next: (data) => {
         console.log('[DatasetsComponent] ingest SUCCESS:', data);
         this.ingesting[datasetCode] = false;

@@ -38,9 +38,17 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
             <a routerLink="/analytics" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
               <i class="bi bi-graph-up me-2" style="color:#16a34a;"></i><span class="fw-semibold">Analytics</span>
             </a>
-            <a routerLink="/datasets" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
-              <i class="bi bi-database me-2" style="color:#7c3aed;"></i><span class="fw-semibold">Datasets</span>
-            </a>
+            <div class="mb-1">
+              <div class="list-group-item border-0 rounded-3 px-3 py-2" style="background:transparent;">
+                <i class="bi bi-database me-2" style="color:#7c3aed;"></i><span class="fw-semibold" style="color:#333;">Datasets</span>
+              </div>
+              <a routerLink="/datasets" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-0 ps-5 py-1" style="background:transparent; font-size: 0.85em;">
+                <i class="bi bi-list-ul me-2" style="color:#4f46e5;"></i>Definitions
+              </a>
+              <a routerLink="/dataset-instances" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-0 ps-5 py-1" style="background:transparent; font-size: 0.85em;">
+                <i class="bi bi-hdd-stack me-2" style="color:#7c3aed;"></i>Instances
+              </a>
+            </div>
             <a routerLink="/digital-twin" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
               <i class="bi bi-diagram-3 me-2" style="color:#e11d48;"></i><span class="fw-semibold">Digital Twin</span>
             </a>
