@@ -5,12 +5,8 @@
     <artifactId>app-cloud-integration</artifactId>
     <packaging>pom</packaging>
     <name>app-cloud-integration</name>
-    <description>Parent module for all cloud integration modules</description>
+    <description>Parent for all cloud integration modules (AWS, future Azure, GCP)</description>
     <modules>
-        <module>app-cloud-aws-wfs</module>
-        <module>app-cloud-aws-ai</module>
-        <module>app-cloud-aws-bedrock</module>
-        <module>app-cloud-aws-ml</module>
-        <module>app-cloud-aws-agents</module>
+        <module>app-cloud-aws</module>
     </modules>
 </project>

@@ -1,0 +1,28 @@
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+:root {
+  --admin-primary: #0d9488;
+  --admin-accent: #4f46e5;
+  --admin-warm: #ea580c;
+  --admin-success: #16a34a;
+  --admin-rose: #e11d48;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #f0fdfa 0%, #e0e7ff 100%);
+  min-height: 100vh;
+  margin: 0;
+}
+
+.card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
