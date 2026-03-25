@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16
+    container_name: smartcare-postgres
+    environment:
+      POSTGRES_USER: smartcare
+      POSTGRES_PASSWORD: smartcare
+      POSTGRES_DB: smartcare
+    ports:
+      - "5432:5432"
+    volumes:
+      - smartcare-pg-data:/var/lib/postgresql/data
+      - ./init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql
+    restart: unless-stopped
+
+volumes:
+  smartcare-pg-data:

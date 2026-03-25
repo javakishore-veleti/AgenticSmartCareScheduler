@@ -35,6 +35,7 @@
         <module>app-wfs</module>
         <module>app-cloud-integration</module>
         <module>app-agents</module>
+        <module>app-extensions</module>
         <module>app-web</module>
     </modules>
 

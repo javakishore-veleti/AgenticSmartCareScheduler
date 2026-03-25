@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/smartcare_broker
+    driver-class-name: org.postgresql.Driver
+    username: smartcare
+    password: smartcare
+  h2:
+    console:
+      enabled: false
