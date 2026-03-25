@@ -5,6 +5,68 @@
 
 ---
 
+## Mar 31, 2026 — Paper Submission Sprint (12-16 hours)
+
+### Goal
+Submit IEEE ICTS4eHealth 2026 paper (V07) with real implementation evidence: XGBoost metrics, UI screenshots, channel distribution stats, and working code repository.
+
+### Paper Figures Strategy
+| Figure | Source | What it shows | Paper section |
+|---|---|---|---|
+| Fig. 1 | Architecture diagram (already created) | Full system architecture with AWS services | IV. System Architecture |
+| Fig. 2 | Customer Portal screenshot | Patient dashboard: outreach history, AI context agent, status cards | VII. Results — demonstrates patient-facing capability |
+| Fig. 3 | Admin Portal screenshot | Agent pipeline, channel distribution bars, 6 metric cards | VII. Results — demonstrates operational dashboard |
+| Fig. 4 | XGBoost ROC curve / confusion matrix | Real ML model performance | VI. Evaluation |
+| Fig. 5 | Channel distribution chart | IVR / SMS / callback split across C_p states | VII. Results — core contribution visualization |
+
+> **Why screenshots help:** Reviewers see a working system, not just a paper architecture. The admin dashboard directly visualizes the agent pipeline (PCA→COA→PSA→RRA→ACA) and channel distribution — the core claims of the paper.
+
+### Activity Plan (12-16 hours)
+
+| # | Activity | Time | Output | Paper Impact |
+|---|---|---|---|---|
+| **DAY 1 — Implementation (8 hrs)** | | | | |
+| 1 | XGBoost model training on Kaggle dataset | 1.5 hr | F1, AUC, precision, recall, ROC curve | Replace qualitative claims with real numbers |
+| 2 | Context state (C_p) simulation on 110K records | 1 hr | C_p distribution stats + channel selection breakdown | Fig. 5 — channel distribution chart |
+| 3 | Wire admin dashboard to real data (or realistic mock) | 1.5 hr | Admin portal showing real metrics, channel bars | Fig. 3 — admin screenshot |
+| 4 | Wire customer dashboard to realistic patient scenarios | 1 hr | Customer portal showing outreach history, context agent | Fig. 2 — customer screenshot |
+| 5 | Generate analytics charts (Python matplotlib) | 1 hr | ROC curve, confusion matrix, channel distribution PNG | Fig. 4, Fig. 5 |
+| 6 | Take high-quality screenshots of both portals | 0.5 hr | PNG files for paper | Fig. 2, Fig. 3 |
+| 7 | Commit all code, push, verify GitHub Actions CI passes | 0.5 hr | Green build, public repo link | Paper credibility |
+| **DAY 2 — Paper Finalization (4-8 hrs)** | | | | |
+| 8 | Update V06 → V07 with real metrics from XGBoost | 1 hr | Replace "evidence-based" with actual F1, AUC | Abstract, VI, VII |
+| 9 | Embed Fig. 2-5 into paper, update figure references | 1 hr | Paper with 5 figures | Throughout |
+| 10 | Update Results/Discussion with real channel distribution | 1 hr | Table IV with real numbers instead of capabilities-only | VII |
+| 11 | Convert to IEEE double-column LaTeX/Word template | 2 hr | Properly formatted IEEE submission | Final format |
+| 12 | Final review: page count (≤7), references, figures fit | 1 hr | Submission-ready PDF | — |
+| 13 | Submit via EDAS | 0.5 hr | Confirmation email | Done |
+
+### Priority Order (if time is short)
+If only 12 hours available, drop in this order:
+1. ~~Wire customer dashboard to real data~~ — use existing mock UI, take screenshot as-is
+2. ~~Generate analytics charts~~ — use table format in paper instead of chart figures
+3. ~~Convert to LaTeX~~ — submit Word doc (EDAS accepts both)
+
+**Minimum viable submission (8 hrs):**
+- XGBoost model → real F1/AUC (Activity 1)
+- C_p distribution stats (Activity 2)
+- Screenshots of existing portals (Activity 6)
+- Update paper V07 with real numbers (Activity 8-10)
+- Submit Word doc via EDAS (Activity 13)
+
+### Key Dates
+| Date | Milestone |
+|---|---|
+| Mar 25-29 | Implementation sprint (Activities 1-7) |
+| Mar 29-30 | Paper finalization (Activities 8-12) |
+| Mar 31 | Submit via EDAS (FIRM deadline) |
+| Apr 20 | Notification of acceptance |
+| Jun 23-26 | Conference in Vilamoura, Portugal |
+
+---
+
+---
+
 ## Technology Stack
 
 | Layer | Technology |
