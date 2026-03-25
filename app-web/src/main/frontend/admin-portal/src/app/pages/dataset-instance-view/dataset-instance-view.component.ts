@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
 @Component({
@@ -80,12 +80,18 @@ import { HttpClient } from '@angular/common/http';
 
         <div class="mt-4">
           <button *ngIf="!editing" class="btn me-2" style="background: #7c3aed; color: white; border-radius: 10px;" (click)="editing = true">
-            <i class="bi bi-pencil me-1"></i>Edit Name
+            <i class="bi bi-pencil me-1"></i>Edit
           </button>
+          <button *ngIf="!editing" class="btn me-2 btn-outline-danger" style="border-radius: 10px;" (click)="deleteInstance()">
+            <i class="bi bi-trash me-1"></i>Delete
+          </button>
+          <a *ngIf="!editing" routerLink="/dataset-instances" class="btn btn-outline-secondary" style="border-radius: 10px;">
+            <i class="bi bi-arrow-left me-1"></i>Back
+          </a>
           <button *ngIf="editing" class="btn me-2" style="background: #0d9488; color: white; border-radius: 10px;" (click)="save()" [disabled]="saving">
             <i class="bi bi-save me-1"></i>{{ saving ? 'Saving...' : 'Save' }}
           </button>
-          <button *ngIf="editing" class="btn btn-outline-secondary" style="border-radius: 10px;" (click)="editing = false">Cancel</button>
+          <button *ngIf="editing" class="btn btn-outline-secondary" style="border-radius: 10px;" (click)="editing = false">Cancel Edit</button>
         </div>
 
         <div *ngIf="successMsg" class="alert alert-success mt-3">
@@ -104,7 +110,7 @@ export class DatasetInstanceViewComponent implements OnInit {
   private instanceId!: number;
   private baseUrl = window.location.origin + '/smart-care/api/admin/v1/analytics/datasets';
 
-  constructor(private route: ActivatedRoute, private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(private route: ActivatedRoute, private routerNav: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.instanceId = Number(this.route.snapshot.paramMap.get('id'));
@@ -140,6 +146,14 @@ export class DatasetInstanceViewComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.saving = false; this.cdr.detectChanges(); }
+    });
+  }
+
+  deleteInstance() {
+    if (!confirm('Are you sure you want to delete this instance?')) return;
+    this.http.delete(`${this.baseUrl}/instances/${this.instanceId}`).subscribe({
+      next: () => { this.routerNav.navigate(['/dataset-instances']); },
+      error: (err) => { console.error('Delete failed', err); }
     });
   }
 }

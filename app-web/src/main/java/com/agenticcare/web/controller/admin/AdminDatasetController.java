@@ -57,6 +57,14 @@ public class AdminDatasetController {
         return ResponseEntity.ok(Map.of("status", "updated"));
     }
 
+    @DeleteMapping("/instances/{instanceId}")
+    @Operation(summary = "Delete a dataset instance")
+    public ResponseEntity<Map<String, String>> deleteInstance(@PathVariable Long instanceId) {
+        log.info(">>> DELETE /datasets/instances/{} called", instanceId);
+        datasetService.deleteInstance(instanceId);
+        return ResponseEntity.ok(Map.of("status", "deleted"));
+    }
+
     @PostMapping("/{datasetCode}/ingest")
     @Operation(summary = "Ingest a dataset to a storage target")
     public ResponseEntity<DatasetDetailsRespDto> ingestDataset(

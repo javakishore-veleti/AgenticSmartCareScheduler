@@ -68,7 +68,7 @@ interface IngestConfig {
                 [style.background]="ds.instances.length > 0 ? '#16a34a22' : '#ea580c22'"
                 [style.color]="ds.instances.length > 0 ? '#16a34a' : '#ea580c'">
             <i class="bi" [class.bi-check-circle]="ds.instances.length > 0" [class.bi-x-circle]="ds.instances.length === 0"></i>
-            {{ ds.instances.length > 0 ? ds.instances.length + ' instance(s)' : 'Not ingested' }}
+            {{ ds.instances.length > 0 ? 'Ingested' : 'Not ingested' }}
           </span>
           <button class="btn btn-sm ms-2"
                   style="background: linear-gradient(135deg, #0d9488, #4f46e5); color: white; border-radius: 8px;"
@@ -175,7 +175,7 @@ interface IngestConfig {
           <button *ngIf="!showInstances[ds.datasetCode]" class="btn btn-sm"
                   style="background: #7c3aed22; color: #7c3aed; border-radius: 8px;"
                   (click)="showInstances[ds.datasetCode] = true">
-            <i class="bi bi-hdd-stack me-1"></i>Show {{ ds.instances.length }} Instance(s)
+            <i class="bi bi-hdd-stack me-1"></i>Show Instances
           </button>
           <button *ngIf="showInstances[ds.datasetCode]" class="btn btn-sm"
                   style="background: #7c3aed22; color: #7c3aed; border-radius: 8px;"

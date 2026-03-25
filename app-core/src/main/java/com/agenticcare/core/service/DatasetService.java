@@ -131,6 +131,11 @@ public class DatasetService {
         return getDatasetDetails(datasetCode);
     }
 
+    public void deleteInstance(Long instanceId) {
+        log.info("Deleting instance {}", instanceId);
+        instanceRepo.deleteById(instanceId);
+    }
+
     public void updateInstanceName(Long instanceId, String name) {
         DatasetInstanceEntity instance = instanceRepo.findById(instanceId)
                 .orElseThrow(() -> new RuntimeException("Instance not found: " + instanceId));
