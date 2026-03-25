@@ -6,6 +6,7 @@
     <name>app-wfs</name>
     <description>Workflow definitions</description>
     <dependencies>
-        <dependency><groupId>com.agenticcare</groupId><artifactId>app-common app-core</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-common</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-core</artifactId></dependency>
     </dependencies>
 </project>

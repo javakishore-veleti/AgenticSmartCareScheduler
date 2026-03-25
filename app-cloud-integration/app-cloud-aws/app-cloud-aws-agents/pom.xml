@@ -6,6 +6,7 @@
     <name>app-cloud-aws-agents</name>
     <description>AWS agent facades</description>
     <dependencies>
-        <dependency><groupId>com.agenticcare</groupId><artifactId>app-common app-cloud-aws-bedrock</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-common</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-cloud-aws-bedrock</artifactId></dependency>
     </dependencies>
 </project>

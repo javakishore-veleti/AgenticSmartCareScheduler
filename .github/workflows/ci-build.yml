@@ -1,0 +1,87 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-java:
+    name: Build Spring Boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build all Maven modules
+        run: mvn clean install -DskipTests
+
+      - name: Run tests
+        run: mvn test
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-web-jar
+          path: app-web/target/app-web-*.jar
+
+  build-customer-portal:
+    name: Build Customer Portal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app-web/src/main/frontend/customer-portal/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: app-web/src/main/frontend/customer-portal
+
+      - name: Build Angular
+        run: npx ng build
+        working-directory: app-web/src/main/frontend/customer-portal
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-portal-dist
+          path: app-web/src/main/frontend/customer-portal/dist/
+
+  build-admin-portal:
+    name: Build Admin Portal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app-web/src/main/frontend/admin-portal/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: app-web/src/main/frontend/admin-portal
+
+      - name: Build Angular
+        run: npx ng build
+        working-directory: app-web/src/main/frontend/admin-portal
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-portal-dist
+          path: app-web/src/main/frontend/admin-portal/dist/

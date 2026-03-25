@@ -12,12 +12,12 @@
     "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build --output-path=../../../resources/static/portal/customer",
     "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build --output-path=../../../resources/static/portal/admin",
     "build:ui": "npm run build:customer && npm run build:admin",
-    "build:java": "mvn clean package -DskipTests",
+    "build:java": "mvn clean install -DskipTests",
     "build:all": "npm run build:ui && npm run build:java",
 
     "start:ui:customer": "cd app-web/src/main/frontend/customer-portal && ng serve --port 4200",
     "start:ui:admin": "cd app-web/src/main/frontend/admin-portal && ng serve --port 4201",
-    "start:spring": "mvn -pl app-web spring-boot:run",
+    "start:spring": "mvn install -DskipTests && mvn -pl app-web spring-boot:run",
     "start": "npm run build:ui && npm run start:spring",
 
     "dev": "concurrently \"npm run start:spring\" \"npm run start:ui:customer\" \"npm run start:ui:admin\"",
