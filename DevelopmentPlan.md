@@ -231,3 +231,25 @@ After 5 hours:
 5. Deployed AWS infrastructure (OpenSearch, Lambda, Step Functions)
 6. GitHub Actions CI/CD pipeline evidence
 7. All outputs ready to update paper from V06 → V07
+
+---
+
+## TODO — Next Session
+
+### Admin Portal — Messages
+- Left nav: Messages → Topics (listing of all queue/topic tables)
+- Each topic shows: name, pending count, processed count, last activity
+- Click topic → messages listing with pagination
+- Topics are backed by separate tables (one per topic) in messaging_broker schema
+- Could grow to 25-50 topics
+- Admin can view message details, replay failed, purge completed
+
+### Admin Portal — Workflow Engines
+- Administration → Workflow Engine Definitions (Airflow, EMR, Databricks)
+- Administration → Workflow Engine Instances
+- Wire "Train Model" in Analytics → select workflow → select engine → submit
+
+### Paper V07
+- Update with real XGBoost metrics (F1=0.4541, AUC=0.6106)
+- Take screenshots of admin + customer portals
+- Generate confusion matrix figure for paper
