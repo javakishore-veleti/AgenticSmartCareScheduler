@@ -30,6 +30,8 @@
         <module>app-common</module>
         <module>app-dao</module>
         <module>app-core</module>
+        <module>app-domain-admin</module>
+        <module>app-domain-customer</module>
         <module>app-wfs</module>
         <module>app-cloud-integration</module>
         <module>app-agents</module>
@@ -115,6 +117,16 @@
             <dependency>
                 <groupId>com.agenticcare</groupId>
                 <artifactId>app-agent-audit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-domain-admin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
+                <artifactId>app-domain-customer</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

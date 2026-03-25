@@ -8,6 +8,8 @@
     <dependencies>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-common</artifactId></dependency>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-core</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-domain-admin</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-domain-customer</artifactId></dependency>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-patient</artifactId></dependency>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-communication</artifactId></dependency>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-provider</artifactId></dependency>
