@@ -38,6 +38,9 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
             <a routerLink="/analytics" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
               <i class="bi bi-graph-up me-2" style="color:#16a34a;"></i><span class="fw-semibold">Analytics</span>
             </a>
+            <a routerLink="/datasets" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
+              <i class="bi bi-database me-2" style="color:#7c3aed;"></i><span class="fw-semibold">Datasets</span>
+            </a>
             <a routerLink="/digital-twin" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-1" style="background:transparent;">
               <i class="bi bi-diagram-3 me-2" style="color:#e11d48;"></i><span class="fw-semibold">Digital Twin</span>
             </a>

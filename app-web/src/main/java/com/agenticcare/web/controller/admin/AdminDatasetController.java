@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/smart-care/api/admin/v1/analytics/datasets")
@@ -30,5 +31,12 @@ public class AdminDatasetController {
     @Operation(summary = "Get dataset details including storage instances and status")
     public ResponseEntity<DatasetDetailsRespDto> getDatasetDetails(@PathVariable String datasetCode) {
         return ResponseEntity.ok(datasetService.getDatasetDetails(datasetCode));
+    }
+
+    @PostMapping("/seed-defaults")
+    @Operation(summary = "Seed default datasets into the database (on-demand, not at startup)")
+    public ResponseEntity<Map<String, String>> seedDefaults() {
+        datasetService.seedDefaultDatasets();
+        return ResponseEntity.ok(Map.of("status", "seeded", "message", "Default datasets registered successfully"));
     }
 }

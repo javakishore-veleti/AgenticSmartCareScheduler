@@ -27,7 +27,6 @@ public class DatasetService {
         this.instanceRepo = instanceRepo;
     }
 
-    @PostConstruct
     public void seedDefaultDatasets() {
         if (masterRepo.findByDatasetCode("MEDICAL_APPT_NOSHOW").isEmpty()) {
             DatasetMasterEntity ds = new DatasetMasterEntity();
