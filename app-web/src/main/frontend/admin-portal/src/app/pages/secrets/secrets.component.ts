@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { SecuritySettingsService, SecuritySetting } from '../../services/security-settings.service';
 import { AWS_REGIONS } from '../../services/aws-constants';
 
@@ -36,14 +37,24 @@ import { AWS_REGIONS } from '../../services/aws-constants';
           <!-- AWS_CLIENT_PROFILE fields -->
           <ng-container *ngIf="newSetting.settingType === 'AWS_CLIENT_PROFILE'">
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Profile Name</label>
-              <input type="text" class="form-control form-control-sm" [(ngModel)]="configFields.profileName" placeholder="default">
+              <label class="form-label small fw-semibold">Profile</label>
+              <div class="input-group input-group-sm">
+                <select *ngIf="localProfiles.length > 0" class="form-select form-select-sm" [(ngModel)]="configFields.profileName"
+                        (change)="onProfileSelect()">
+                  <option *ngFor="let p of localProfiles" [value]="p.profileName">
+                    {{ p.profileName }} {{ p.region ? '(' + p.region + ')' : '' }}
+                  </option>
+                </select>
+                <input *ngIf="localProfiles.length === 0" type="text" class="form-control form-control-sm"
+                       [(ngModel)]="configFields.profileName" placeholder="default">
+              </div>
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Region</label>
-              <select class="form-select form-select-sm" [(ngModel)]="configFields.region">
-                <option *ngFor="let r of awsRegions" [value]="r.code">{{ r.name }} ({{ r.code }})</option>
-              </select>
+              <label class="form-label small fw-semibold">&nbsp;</label>
+              <button class="btn btn-sm w-100 d-block" style="background: #f0fdfa; color: #0d9488; border: 1px solid #0d9488; border-radius: 8px;"
+                      (click)="scanProfiles()" [disabled]="scanning">
+                <i class="bi bi-search me-1"></i>{{ scanning ? 'Scanning...' : 'Scan Local Profiles' }}
+              </button>
             </div>
           </ng-container>
 
@@ -128,15 +139,53 @@ export class SecretsComponent implements OnInit {
   settings: SecuritySetting[] = [];
   loading = true;
   creating = false;
+  scanning = false;
   awsRegions = AWS_REGIONS;
+  localProfiles: { profileName: string; region: string }[] = [];
+  nameAutoFilled = false;
   newSetting = { settingName: '', settingType: 'AWS_CLIENT_PROFILE' };
   configFields: any = { profileName: 'default', region: 'us-east-1', accessKeyId: '', secretAccessKey: '' };
 
-  constructor(private service: SecuritySettingsService, private cdr: ChangeDetectorRef) {}
+  constructor(private service: SecuritySettingsService, private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() { this.loadSettings(); }
 
-  onTypeChange() { this.cdr.detectChanges(); }
+  onTypeChange() {
+    this.localProfiles = [];
+    this.cdr.detectChanges();
+  }
+
+  scanProfiles() {
+    this.scanning = true;
+    this.cdr.detectChanges();
+    this.http.get<{ profileName: string; region: string }[]>(
+      window.location.origin + '/smart-care/api/admin/v1/aws-profiles/scan'
+    ).subscribe({
+      next: (profiles) => {
+        this.localProfiles = profiles;
+        this.scanning = false;
+        if (profiles.length > 0) {
+          this.configFields.profileName = profiles[0].profileName;
+          this.configFields.region = profiles[0].region;
+          this.onProfileSelect();
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => { this.scanning = false; this.cdr.detectChanges(); }
+    });
+  }
+
+  onProfileSelect() {
+    const p = this.localProfiles.find(x => x.profileName === this.configFields.profileName);
+    if (p) {
+      this.configFields.region = p.region;
+      if (!this.newSetting.settingName || this.nameAutoFilled) {
+        this.newSetting.settingName = 'aws-profile-' + p.profileName;
+        this.nameAutoFilled = true;
+      }
+    }
+    this.cdr.detectChanges();
+  }
 
   loadSettings() {
     this.loading = true;
