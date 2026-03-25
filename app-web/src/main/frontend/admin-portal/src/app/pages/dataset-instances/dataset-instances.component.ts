@@ -36,11 +36,16 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
             <th>Location</th>
             <th>Records</th>
             <th>Created</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let inst of pagedInstances">
-            <td class="fw-semibold" style="color: #7c3aed;">{{ inst.instanceName || 'Unnamed' }}</td>
+            <td>
+              <a [routerLink]="['/dataset-instances', inst.instanceId, 'view']" class="fw-semibold" style="color: #7c3aed; text-decoration: none;">
+                {{ inst.instanceName || 'Unnamed' }}
+              </a>
+            </td>
             <td>
               <a [routerLink]="['/datasets']" style="color: #4f46e5; text-decoration: none;">
                 {{ inst.datasetName }}
@@ -57,6 +62,11 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
             <td class="small text-muted" style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;">{{ inst.storageLocationHint }}</td>
             <td>{{ inst.loadedRecordCount | number }}</td>
             <td class="small">{{ inst.createdAt | date:'short' }}</td>
+            <td>
+              <a [routerLink]="['/dataset-instances', inst.instanceId, 'view']" class="btn btn-sm me-1" style="background: #7c3aed22; color: #7c3aed; border-radius: 6px;">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
           </tr>
         </tbody>
       </table>

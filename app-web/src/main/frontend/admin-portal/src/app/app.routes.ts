@@ -5,6 +5,7 @@ import { ScenariosComponent } from './pages/scenarios/scenarios.component';
 import { AnalyticsComponent } from './pages/analytics/analytics.component';
 import { DatasetsComponent } from './pages/datasets/datasets.component';
 import { DatasetInstancesComponent } from './pages/dataset-instances/dataset-instances.component';
+import { DatasetInstanceViewComponent } from './pages/dataset-instance-view/dataset-instance-view.component';
 import { DigitalTwinComponent } from './pages/digital-twin/digital-twin.component';
 import { AuditComponent } from './pages/audit/audit.component';
 import { SecretsComponent } from './pages/secrets/secrets.component';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'analytics', component: AnalyticsComponent },
   { path: 'datasets', component: DatasetsComponent },
   { path: 'dataset-instances', component: DatasetInstancesComponent },
+  { path: 'dataset-instances/:id/view', component: DatasetInstanceViewComponent },
   { path: 'digital-twin', component: DigitalTwinComponent },
   { path: 'secrets', component: SecretsComponent },
   { path: 'secrets/:id/edit', component: SecretEditComponent },

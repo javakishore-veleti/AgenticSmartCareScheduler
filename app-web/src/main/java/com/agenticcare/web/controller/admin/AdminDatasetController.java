@@ -49,6 +49,14 @@ public class AdminDatasetController {
         return ResponseEntity.ok(Map.of("status", "seeded", "message", "Default datasets registered successfully"));
     }
 
+    @PutMapping("/instances/{instanceId}")
+    @Operation(summary = "Update dataset instance (e.g., rename)")
+    public ResponseEntity<Map<String, String>> updateInstance(@PathVariable Long instanceId, @RequestBody Map<String, String> body) {
+        log.info(">>> PUT /datasets/instances/{} called", instanceId);
+        datasetService.updateInstanceName(instanceId, body.get("instanceName"));
+        return ResponseEntity.ok(Map.of("status", "updated"));
+    }
+
     @PostMapping("/{datasetCode}/ingest")
     @Operation(summary = "Ingest a dataset to a storage target")
     public ResponseEntity<DatasetDetailsRespDto> ingestDataset(

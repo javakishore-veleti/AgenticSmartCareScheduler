@@ -131,6 +131,14 @@ public class DatasetService {
         return getDatasetDetails(datasetCode);
     }
 
+    public void updateInstanceName(Long instanceId, String name) {
+        DatasetInstanceEntity instance = instanceRepo.findById(instanceId)
+                .orElseThrow(() -> new RuntimeException("Instance not found: " + instanceId));
+        instance.setInstanceName(name);
+        instanceRepo.save(instance);
+        log.info("Updated instance {} name to: {}", instanceId, name);
+    }
+
     public List<DatasetDetailsRespDto> getAllDatasets() {
         return masterRepo.findAll().stream()
                 .map(master -> getDatasetDetails(master.getDatasetCode()))
