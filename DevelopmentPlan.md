@@ -185,64 +185,241 @@ analytics/
 
 ---
 
-## Project Structure
+## Project Structure — Multi-Module Spring Boot
+
+The application follows a multi-module Maven architecture with a root parent POM and domain-specific modules. Each module has a single responsibility and clear dependency boundaries.
 
 ```
 AgenticSmartCareScheduler/
-├── CLAUDE.md                          — Context for Claude Code
-├── DevelopmentPlan.md                 — This file
-├── README.md                          — Project overview
+├── pom.xml                                    — Parent POM (dependency management, versions)
+├── CLAUDE.md
+├── DevelopmentPlan.md
+├── README.md
 ├── .gitignore
-├── src/
-│   ├── main/java/com/agenticcare/
-│   │   ├── AgenticSmartCareApplication.java
-│   │   ├── pca/
-│   │   │   ├── PatientContextAgent.java
-│   │   │   ├── RiskScoringService.java
-│   │   │   ├── ContextClassificationService.java
-│   │   │   └── PatientContextResult.java
-│   │   ├── coa/
-│   │   │   ├── CommunicationOrchestrationAgent.java
-│   │   │   ├── ChannelSelectionService.java
-│   │   │   ├── ConnectOutreachService.java
-│   │   │   └── OutreachResult.java
-│   │   ├── orchestrator/
-│   │   │   ├── AgentOrchestrator.java
-│   │   │   ├── DigitalTwinService.java
-│   │   │   └── EventBridgePublisher.java
-│   │   └── config/
-│   │       ├── BedrockConfig.java
-│   │       ├── OpenSearchConfig.java
-│   │       └── ConnectConfig.java
-│   └── main/resources/
-│       ├── application.yml
-│       ├── application-local.yml
-│       └── application-aws.yml
+│
+├── app-common/                                — Shared interfaces, DTOs, constants, enums
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/common/
+│       ├── constants/
+│       │   └── AgentConstants.java            — R_p thresholds, T_v intervals, channel types
+│       ├── enums/
+│       │   ├── ContextState.java              — REACHABLE_STATIONARY, REACHABLE_MOBILE, UNREACHABLE
+│       │   ├── SlotStatus.java                — CONFIRMED, AT_RISK, VACANT
+│       │   └── OutreachChannel.java           — VOICE_IVR, SMS_DEEPLINK, CALLBACK
+│       ├── dto/
+│       │   ├── PatientContextResult.java      — Record: (C_p, R_p, P_p)
+│       │   ├── OutreachResult.java            — Record: channel, timestamp, outcome
+│       │   ├── SlotEscalationEvent.java       — PSA → RRA event
+│       │   └── AuditEntry.java                — ACA audit document
+│       └── interfaces/
+│           ├── Agent.java                     — Base agent interface
+│           └── DigitalTwinState.java          — DT(t) state contract
+│
+├── app-dao/                                   — Data access: JPA, OpenSearch, vector DB
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/dao/
+│       ├── entity/
+│       │   ├── AppointmentEntity.java         — appointments index/table
+│       │   ├── OutreachEventEntity.java       — outreach_events index
+│       │   ├── ProviderScheduleEntity.java    — provider_schedule index
+│       │   └── AuditLogEntity.java            — audit_log index (ILM write-once)
+│       ├── repository/
+│       │   ├── rdbms/                         — JPA repositories (H2/PostgreSQL for local)
+│       │   ├── opensearch/                    — OpenSearch repositories (4 indices)
+│       │   └── vector/                        — Vector search for patient embeddings
+│       └── config/
+│           ├── JpaConfig.java
+│           ├── OpenSearchConfig.java
+│           └── VectorStoreConfig.java
+│
+├── app-core/                                  — Core business logic, service facades
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/core/
+│       ├── service/
+│       │   ├── RiskScoringService.java        — XGBoost model inference
+│       │   ├── ContextClassificationService.java — C_p classification logic
+│       │   ├── ChannelSelectionService.java   — Table I mapping: C_p → channel
+│       │   ├── ScheduleMonitorService.java    — T-90min / T-30min escalation logic
+│       │   ├── WaitlistReallocationService.java — Waitlist query + slot reservation
+│       │   ├── AuditService.java              — Immutable audit logging
+│       │   └── DigitalTwinService.java        — DT(t) state management
+│       └── facade/
+│           ├── PatientContextFacade.java      — Orchestrates PCA sub-services
+│           ├── CommunicationFacade.java       — Orchestrates COA sub-services
+│           └── CoordinationFacade.java        — End-to-end PCA→COA→PSA→RRA→ACA
+│
+├── app-web/                                   — REST API controllers
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/web/
+│       ├── controller/
+│       │   ├── AppointmentController.java     — Ingest appointments, trigger coordination
+│       │   ├── AgentStatusController.java     — Agent health, DT(t) state queries
+│       │   ├── AnalyticsController.java       — Metrics endpoints for dashboard
+│       │   └── ScenarioController.java        — Trigger specific test scenarios
+│       └── config/
+│           └── WebSecurityConfig.java
+│
+├── app-wfs/                                   — Workflow definitions (Temporal / AWS)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/wfs/
+│       ├── CoordinationWorkflow.java          — PCA→COA→PSA→RRA→ACA sequence
+│       ├── EscalationWorkflow.java            — T-90min / T-30min escalation
+│       └── ReallocationWorkflow.java          — Waitlist reallocation sequence
+│
+├── app-cloud-aws-wfs/                         — AWS workflow facades (Step Functions)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/cloud/aws/wfs/
+│       ├── StepFunctionsOrchestrator.java     — Start/monitor Step Functions executions
+│       └── EventBridgePublisher.java          — Publish/consume EventBridge events
+│
+├── app-cloud-aws-ai/                          — AWS AI service facades (Bedrock)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/cloud/aws/ai/
+│       ├── BedrockChatService.java            — Spring AI ChatClient with Bedrock
+│       ├── BedrockKnowledgeBaseService.java   — RAG over patient interaction history
+│       └── BedrockEmbeddingService.java       — Vector embeddings for patient context
+│
+├── app-cloud-aws-ml/                          — AWS ML service facades
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/cloud/aws/ml/
+│       ├── SageMakerInferenceService.java     — If model hosted on SageMaker
+│       └── ModelRegistryService.java          — Model versioning
+│
+├── app-cloud-aws-agents/                      — AWS agent orchestration
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/cloud/aws/agents/
+│       ├── BedrockAgentService.java           — Amazon Bedrock Agents integration
+│       └── ConnectAgentService.java           — Amazon Connect contact flow execution
+│
+├── app-agent-patient/                         — Patient persona agent (PCA)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/agent/patient/
+│       ├── PatientContextAgent.java           — @Tool annotated, Spring AI agent
+│       └── PatientContextToolCallbacks.java   — Tool definitions for Bedrock
+│
+├── app-agent-communication/                   — Communication persona agent (COA)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/agent/communication/
+│       ├── CommunicationOrchestrationAgent.java — @Tool annotated
+│       └── ChannelSelectionToolCallbacks.java
+│
+├── app-agent-provider/                        — Provider persona agent (PSA)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/agent/provider/
+│       ├── ProviderScheduleAgent.java         — @Tool annotated
+│       └── EscalationToolCallbacks.java
+│
+├── app-agent-resource/                        — Resource admin persona agent (RRA)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/agent/resource/
+│       ├── ResourceReallocationAgent.java     — @Tool annotated
+│       └── WaitlistToolCallbacks.java
+│
+├── app-agent-audit/                           — Audit persona agent (ACA)
+│   ├── pom.xml
+│   └── src/main/java/com/agenticcare/agent/audit/
+│       ├── AuditComplianceAgent.java          — @Tool annotated
+│       └── AuditToolCallbacks.java
+│
+├── python/                                    — Python: ML training + analytics
+│   ├── requirements.txt
+│   ├── data_prep/
+│   │   └── prepare_dataset.py                 — Download + clean Kaggle dataset
+│   ├── ml/
+│   │   ├── train_risk_model.py                — XGBoost training, 5-fold CV
+│   │   ├── context_state_simulator.py         — Assign C_p based on time patterns
+│   │   └── export_model.py                    — Export to ONNX for Java inference
+│   └── analytics/
+│       ├── risk_model_evaluation.py           — F1, AUC, ROC curve
+│       ├── channel_distribution.py            — C_p + channel breakdown
+│       ├── baseline_comparison.py             — Proposed vs SMS-only
+│       └── output/                            — Generated charts + metrics
+│
 ├── data/
-│   └── .gitkeep                       — Kaggle dataset downloaded here
+│   └── .gitkeep
 ├── models/
-│   └── .gitkeep                       — Trained XGBoost model saved here
-├── analytics/
-│   ├── risk_model_evaluation.py
-│   ├── channel_distribution.py
-│   ├── baseline_comparison.py
-│   └── output/
+│   └── .gitkeep
+│
 ├── infra/
 │   ├── cfn-opensearch.yaml
 │   ├── cfn-lambda.yaml
 │   ├── cfn-eventbridge.yaml
 │   └── cfn-stepfunctions.yaml
+│
 ├── .github/workflows/
 │   ├── bootstrap-infra.yml
 │   ├── deploy-agents.yml
 │   ├── run-scenario.yml
 │   ├── extract-analytics.yml
 │   └── shutdown-infra.yml
-├── tests/
-│   ├── test_pca_risk_model.py
-│   └── test_channel_selection.py
-├── pom.xml                            — Maven build
-└── Dockerfile                         — For Lambda deployment
+│
+└── tests/
+    ├── java/                                  — JUnit tests per module
+    └── python/                                — pytest for ML + analytics
+```
+
+### Coding Conventions
+
+**Request/Response Pattern:**
+- All service methods accept `ExecCtx` (Execution Context) — never raw arguments
+- `ExecCtx` internally contains `ReqDto` and `RespDto`
+- API controllers create `ReqDto` from HTTP GET parameters or POST body
+- API controllers create a fresh `RespDto` object
+- API controllers wrap both into `ExecCtx` and pass to service facades
+
+```java
+// Example pattern
+public class PatientContextReqDto { ... }
+public class PatientContextRespDto { ... }
+public class ExecCtx<REQ, RESP> {
+    private REQ reqDto;
+    private RESP respDto;
+}
+
+// Controller
+@PostMapping("/classify")
+public ResponseEntity<PatientContextRespDto> classify(@RequestBody PatientContextReqDto reqDto) {
+    PatientContextRespDto respDto = new PatientContextRespDto();
+    ExecCtx<PatientContextReqDto, PatientContextRespDto> ctx = new ExecCtx<>(reqDto, respDto);
+    patientContextFacade.classify(ctx);
+    return ResponseEntity.ok(ctx.getRespDto());
+}
+
+// Service
+public void classify(ExecCtx<PatientContextReqDto, PatientContextRespDto> ctx) { ... }
+```
+
+**Naming Conventions:**
+- Request DTOs: `*ReqDto`
+- Response DTOs: `*RespDto`
+- Execution Context: `ExecCtx<REQ, RESP>`
+- Service interfaces: `I*Service`
+- Facade interfaces: `I*Facade`
+
+### Module Dependency Graph
+
+```
+app-common          ← no dependencies (pure DTOs, interfaces, enums)
+    ↑
+app-dao             ← depends on app-common
+    ↑
+app-core            ← depends on app-common, app-dao
+    ↑
+app-cloud-aws-ai    ← depends on app-common
+app-cloud-aws-ml    ← depends on app-common
+app-cloud-aws-wfs   ← depends on app-common
+app-cloud-aws-agents ← depends on app-common, app-cloud-aws-ai
+    ↑
+app-agent-patient   ← depends on app-common, app-core, app-cloud-aws-ai
+app-agent-communication ← depends on app-common, app-core, app-cloud-aws-agents
+app-agent-provider  ← depends on app-common, app-core, app-dao
+app-agent-resource  ← depends on app-common, app-core, app-dao
+app-agent-audit     ← depends on app-common, app-core, app-dao
+    ↑
+app-wfs             ← depends on app-common, app-core, app-agent-*
+app-cloud-aws-wfs   ← depends on app-wfs
+    ↑
+app-web             ← depends on all (top-level assembly)
 ```
 
 ---
