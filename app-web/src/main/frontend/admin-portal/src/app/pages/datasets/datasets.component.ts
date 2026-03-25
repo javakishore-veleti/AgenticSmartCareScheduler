@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DatasetService, DatasetDetails } from '../../services/dataset.service';
+import { AWS_REGIONS } from '../../services/aws-constants';
 
 interface IngestConfig {
   storageType: string;
@@ -109,8 +110,9 @@ interface IngestConfig {
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">AWS Region</label>
-              <input type="text" class="form-control form-control-sm" [(ngModel)]="ingestConfig[ds.datasetCode].awsRegion"
-                     placeholder="us-east-1">
+              <select class="form-select form-select-sm" [(ngModel)]="ingestConfig[ds.datasetCode].awsRegion">
+                <option *ngFor="let r of awsRegions" [value]="r.code">{{ r.code }}</option>
+              </select>
             </div>
           </ng-container>
           <div class="col-md-2">
@@ -212,6 +214,7 @@ export class DatasetsComponent implements OnInit {
   ingesting: { [key: string]: boolean } = {};
   showIngestPanel: { [key: string]: boolean } = {};
   ingestConfig: { [key: string]: IngestConfig } = {};
+  awsRegions = AWS_REGIONS;
 
   constructor(private datasetService: DatasetService, private cdr: ChangeDetectorRef) {}
 

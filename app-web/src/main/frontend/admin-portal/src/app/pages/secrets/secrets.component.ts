@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecuritySettingsService, SecuritySetting } from '../../services/security-settings.service';
+import { AWS_REGIONS } from '../../services/aws-constants';
 
 @Component({
   selector: 'app-secrets',
@@ -40,7 +41,9 @@ import { SecuritySettingsService, SecuritySetting } from '../../services/securit
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Region</label>
-              <input type="text" class="form-control form-control-sm" [(ngModel)]="configFields.region" placeholder="us-east-1">
+              <select class="form-select form-select-sm" [(ngModel)]="configFields.region">
+                <option *ngFor="let r of awsRegions" [value]="r.code">{{ r.name }} ({{ r.code }})</option>
+              </select>
             </div>
           </ng-container>
 
@@ -56,7 +59,9 @@ import { SecuritySettingsService, SecuritySetting } from '../../services/securit
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Region</label>
-              <input type="text" class="form-control form-control-sm" [(ngModel)]="configFields.region" placeholder="us-east-1">
+              <select class="form-select form-select-sm" [(ngModel)]="configFields.region">
+                <option *ngFor="let r of awsRegions" [value]="r.code">{{ r.name }} ({{ r.code }})</option>
+              </select>
             </div>
           </ng-container>
 
@@ -123,6 +128,7 @@ export class SecretsComponent implements OnInit {
   settings: SecuritySetting[] = [];
   loading = true;
   creating = false;
+  awsRegions = AWS_REGIONS;
   newSetting = { settingName: '', settingType: 'AWS_CLIENT_PROFILE' };
   configFields: any = { profileName: 'default', region: 'us-east-1', accessKeyId: '', secretAccessKey: '' };
 
