@@ -10,8 +10,8 @@
     "install:all": "npm run install:ui && npm run install:python",
 
     "prebuild:ui": "mkdir -p app-web/src/main/resources/static/portal/customer app-web/src/main/resources/static/portal/admin",
-    "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build && cp -r dist/customer-portal/browser/* ../../resources/static/portal/customer/",
-    "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build && cp -r dist/admin-portal/browser/* ../../resources/static/portal/admin/",
+    "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build --base-href /portal/customer/ && cp -r dist/customer-portal/browser/* ../../resources/static/portal/customer/",
+    "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build --base-href /portal/admin/ && cp -r dist/admin-portal/browser/* ../../resources/static/portal/admin/",
     "build:ui": "npm run build:customer && npm run build:admin",
     "build:java": "mvn clean install -DskipTests",
     "build:all": "npm run build:ui && npm run build:java",
