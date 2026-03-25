@@ -107,7 +107,12 @@ public class DatasetService {
             log.info("Ingesting dataset: {} to local: {}", datasetCode, fullPath);
         }
 
+        // Count existing instances for naming
+        long count = instanceRepo.findByDatasetMasterId(master.getId()).size();
+        String instanceName = master.getDisplayName() + " — " + storageType.name() + " #" + (count + 1);
+
         DatasetInstanceEntity instance = new DatasetInstanceEntity();
+        instance.setInstanceName(instanceName);
         instance.setDatasetMaster(master);
         instance.setStorageType(storageType);
         instance.setFormat(master.getDefaultFormat());
@@ -133,6 +138,7 @@ public class DatasetService {
     private DatasetDetailsRespDto.DatasetInstanceInfo toInstanceInfo(DatasetInstanceEntity entity) {
         DatasetDetailsRespDto.DatasetInstanceInfo info = new DatasetDetailsRespDto.DatasetInstanceInfo();
         info.setInstanceId(entity.getId());
+        info.setInstanceName(entity.getInstanceName());
         info.setStorageType(entity.getStorageType());
         info.setFormat(entity.getFormat());
         info.setStatus(entity.getStatus());

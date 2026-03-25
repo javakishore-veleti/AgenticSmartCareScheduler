@@ -30,6 +30,7 @@ public class DatasetDetailsRespDto {
     @NoArgsConstructor
     public static class DatasetInstanceInfo {
         private Long instanceId;
+        private String instanceName;
         private DatasetStorageType storageType;
         private DatasetFormat format;
         private DatasetStatus status;

@@ -19,6 +19,9 @@ public class DatasetInstanceEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "instance_name")
+    private String instanceName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dataset_master_id", nullable = false)
     private DatasetMasterEntity datasetMaster;

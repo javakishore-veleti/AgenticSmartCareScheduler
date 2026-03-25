@@ -29,25 +29,24 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
       <table class="table table-hover align-middle">
         <thead>
           <tr style="color: #7c3aed;">
+            <th>Instance Name</th>
             <th>Dataset</th>
             <th>Storage</th>
-            <th>Format</th>
             <th>Status</th>
             <th>Location</th>
             <th>Records</th>
-            <th>Size</th>
             <th>Created</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let inst of pagedInstances">
+            <td class="fw-semibold" style="color: #7c3aed;">{{ inst.instanceName || 'Unnamed' }}</td>
             <td>
-              <a [routerLink]="['/datasets']" style="color: #4f46e5; text-decoration: none; font-weight: 600;">
+              <a [routerLink]="['/datasets']" style="color: #4f46e5; text-decoration: none;">
                 {{ inst.datasetName }}
               </a>
             </td>
             <td><span class="badge" style="background: #4f46e522; color: #4f46e5;">{{ inst.storageType }}</span></td>
-            <td class="small">{{ inst.format }}</td>
             <td>
               <span class="badge"
                     [style.background]="inst.status === 'AVAILABLE' ? '#16a34a22' : '#ea580c22'"
@@ -57,7 +56,6 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
             </td>
             <td class="small text-muted" style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;">{{ inst.storageLocationHint }}</td>
             <td>{{ inst.loadedRecordCount | number }}</td>
-            <td>{{ inst.fileSizeBytes ? (inst.fileSizeBytes / 1024 / 1024 | number:'1.1-1') + ' MB' : '—' }}</td>
             <td class="small">{{ inst.createdAt | date:'short' }}</td>
           </tr>
         </tbody>
