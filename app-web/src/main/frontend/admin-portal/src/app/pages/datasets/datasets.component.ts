@@ -176,13 +176,21 @@ export class DatasetsComponent implements OnInit {
 
   seedDefaults() {
     this.seeding = true;
+    this.cdr.detectChanges();
+    console.log('[DatasetsComponent] calling seedDefaults...');
     this.datasetService.seedDefaults().subscribe({
-      next: () => {
+      next: (resp) => {
+        console.log('[DatasetsComponent] seed SUCCESS:', resp);
         this.seedMessage = 'Default datasets registered successfully!';
         this.seeding = false;
+        this.cdr.detectChanges();
         this.loadDatasets();
       },
-      error: () => { this.seeding = false; }
+      error: (err) => {
+        console.error('[DatasetsComponent] seed ERROR:', err);
+        this.seeding = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 }
