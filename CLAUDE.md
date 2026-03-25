@@ -4,7 +4,8 @@
 Before scanning the codebase, read these files for full context:
 1. **CLAUDE.md** (this file) — architecture, agents, dataset, AWS stack
 2. **CodingConventions.md** — ExecCtx/ReqDto/RespDto pattern, module structure, naming, Spring AI patterns
-3. **DevelopmentPlan.md** — 5-phase plan, module layout, project structure, scenarios
+3. **ArchitectureDecisions.md** — databases, observability, DevOps/Local, Angular portals, Bedrock, EKS, profiles
+4. **DevelopmentPlan.md** — 5-phase plan, scenarios, outputs
 
 These three files contain everything needed to understand and contribute to this project without scanning the full codebase.
 
