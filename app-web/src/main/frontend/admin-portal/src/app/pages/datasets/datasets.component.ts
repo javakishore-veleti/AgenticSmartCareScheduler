@@ -5,6 +5,7 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
 import { AWS_REGIONS } from '../../services/aws-constants';
 
 interface IngestConfig {
+  instanceName: string;
   storageType: string;
   localBasePath: string;
   s3Bucket: string;
@@ -80,6 +81,11 @@ interface IngestConfig {
       <div *ngIf="showIngestPanel[ds.datasetCode]" class="card-body border-top" style="background: #f8f9fa;">
         <h6 class="fw-bold" style="color: #4f46e5;"><i class="bi bi-arrow-down-circle me-2"></i>Ingest to Storage</h6>
         <div class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Instance Name</label>
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="ingestConfig[ds.datasetCode].instanceName"
+                   [placeholder]="ds.displayName + ' — Local #1'">
+          </div>
           <div class="col-md-3">
             <label class="form-label small fw-semibold">Storage Type</label>
             <select class="form-select form-select-sm" [(ngModel)]="ingestConfig[ds.datasetCode].storageType"
@@ -164,9 +170,21 @@ interface IngestConfig {
           </div>
         </div>
 
-        <!-- Instances table -->
-        <div *ngIf="ds.instances.length > 0">
-          <h6 class="fw-bold" style="color: #4f46e5;"><i class="bi bi-hdd-stack me-2"></i>Storage Instances</h6>
+        <!-- Instances section -->
+        <div *ngIf="ds.instances.length > 0" class="mt-3">
+          <button *ngIf="!showInstances[ds.datasetCode]" class="btn btn-sm"
+                  style="background: #7c3aed22; color: #7c3aed; border-radius: 8px;"
+                  (click)="showInstances[ds.datasetCode] = true">
+            <i class="bi bi-hdd-stack me-1"></i>Show {{ ds.instances.length }} Instance(s)
+          </button>
+          <button *ngIf="showInstances[ds.datasetCode]" class="btn btn-sm"
+                  style="background: #7c3aed22; color: #7c3aed; border-radius: 8px;"
+                  (click)="showInstances[ds.datasetCode] = false">
+            <i class="bi bi-chevron-up me-1"></i>Hide Instances
+          </button>
+        </div>
+        <div *ngIf="showInstances[ds.datasetCode] && ds.instances.length > 0" class="mt-2">
+          <h6 class="fw-bold" style="color: #7c3aed;"><i class="bi bi-hdd-stack me-2"></i>Storage Instances</h6>
           <div class="table-responsive">
             <table class="table table-hover table-sm align-middle">
               <thead>
@@ -213,6 +231,7 @@ export class DatasetsComponent implements OnInit {
   seedMessage = '';
   ingesting: { [key: string]: boolean } = {};
   showIngestPanel: { [key: string]: boolean } = {};
+  showInstances: { [key: string]: boolean } = {};
   ingestConfig: { [key: string]: IngestConfig } = {};
   awsRegions = AWS_REGIONS;
 
@@ -265,6 +284,7 @@ export class DatasetsComponent implements OnInit {
     this.showIngestPanel[datasetCode] = !this.showIngestPanel[datasetCode];
     if (!this.ingestConfig[datasetCode]) {
       this.ingestConfig[datasetCode] = {
+        instanceName: '',
         storageType: 'LOCAL_FILESYSTEM',
         localBasePath: '~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded',
         s3Bucket: '',

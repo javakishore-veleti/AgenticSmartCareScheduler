@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class DatasetIngestReqDto {
+    private String instanceName;     // user-defined name
     private String storageType;      // LOCAL_FILESYSTEM, AWS_S3
     private String localBasePath;    // for LOCAL_FILESYSTEM
     private String s3Bucket;         // for AWS_S3

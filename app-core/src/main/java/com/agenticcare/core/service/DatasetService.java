@@ -107,9 +107,11 @@ public class DatasetService {
             log.info("Ingesting dataset: {} to local: {}", datasetCode, fullPath);
         }
 
-        // Count existing instances for naming
+        // Instance name — user-provided or auto-generated
         long count = instanceRepo.findByDatasetMasterId(master.getId()).size();
-        String instanceName = master.getDisplayName() + " — " + storageType.name() + " #" + (count + 1);
+        String instanceName = (req != null && req.getInstanceName() != null && !req.getInstanceName().isBlank())
+                ? req.getInstanceName()
+                : master.getDisplayName() + " — " + storageType.name() + " #" + (count + 1);
 
         DatasetInstanceEntity instance = new DatasetInstanceEntity();
         instance.setInstanceName(instanceName);
