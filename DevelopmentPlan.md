@@ -367,32 +367,56 @@ AgenticSmartCareScheduler/
 - API controllers create a fresh `RespDto` object
 - API controllers wrap both into `ExecCtx` and pass to service facades
 
+Each use case has its own context-specific triplet: `ExecCtx`, `ReqDto`, `RespDto`. These are reusable across services that operate on the same domain context.
+
 ```java
-// Example pattern
-public class PatientContextReqDto { ... }
-public class PatientContextRespDto { ... }
-public class ExecCtx<REQ, RESP> {
-    private REQ reqDto;
-    private RESP respDto;
+// PCA domain
+public class PatientClassifyReqDto { ... }
+public class PatientClassifyRespDto { ... }
+public class PatientClassifyExecCtx {
+    private PatientClassifyReqDto reqDto;
+    private PatientClassifyRespDto respDto;
 }
 
-// Controller
+// COA domain
+public class OutreachSelectReqDto { ... }
+public class OutreachSelectRespDto { ... }
+public class OutreachSelectExecCtx {
+    private OutreachSelectReqDto reqDto;
+    private OutreachSelectRespDto respDto;
+}
+
+// Controller creates ReqDto + fresh RespDto, wraps in ExecCtx
 @PostMapping("/classify")
-public ResponseEntity<PatientContextRespDto> classify(@RequestBody PatientContextReqDto reqDto) {
-    PatientContextRespDto respDto = new PatientContextRespDto();
-    ExecCtx<PatientContextReqDto, PatientContextRespDto> ctx = new ExecCtx<>(reqDto, respDto);
+public ResponseEntity<PatientClassifyRespDto> classify(@RequestBody PatientClassifyReqDto reqDto) {
+    PatientClassifyRespDto respDto = new PatientClassifyRespDto();
+    PatientClassifyExecCtx ctx = new PatientClassifyExecCtx(reqDto, respDto);
     patientContextFacade.classify(ctx);
     return ResponseEntity.ok(ctx.getRespDto());
 }
 
-// Service
-public void classify(ExecCtx<PatientContextReqDto, PatientContextRespDto> ctx) { ... }
+// All service/facade methods take ExecCtx — never raw arguments
+public void classify(PatientClassifyExecCtx ctx) { ... }
 ```
 
+**Domain-Specific ExecCtx Triplets:**
+
+| Use Case | ExecCtx | ReqDto | RespDto |
+|---|---|---|---|
+| PCA classification | PatientClassifyExecCtx | PatientClassifyReqDto | PatientClassifyRespDto |
+| PCA risk scoring | RiskScoreExecCtx | RiskScoreReqDto | RiskScoreRespDto |
+| COA channel selection | OutreachSelectExecCtx | OutreachSelectReqDto | OutreachSelectRespDto |
+| PSA escalation | EscalationExecCtx | EscalationReqDto | EscalationRespDto |
+| RRA reallocation | ReallocationExecCtx | ReallocationReqDto | ReallocationRespDto |
+| ACA audit logging | AuditLogExecCtx | AuditLogReqDto | AuditLogRespDto |
+| End-to-end coordination | CoordinationExecCtx | CoordinationReqDto | CoordinationRespDto |
+
+ExecCtx classes are reusable — for example, `PatientClassifyExecCtx` is used by both the PCA agent and any service that needs to classify patient context.
+
 **Naming Conventions:**
-- Request DTOs: `*ReqDto`
-- Response DTOs: `*RespDto`
-- Execution Context: `ExecCtx<REQ, RESP>`
+- Request DTOs: `*ReqDto` (context-specific)
+- Response DTOs: `*RespDto` (context-specific)
+- Execution Context: `*ExecCtx` (domain-specific, contains ReqDto + RespDto)
 - Service interfaces: `I*Service`
 - Facade interfaces: `I*Facade`
 
