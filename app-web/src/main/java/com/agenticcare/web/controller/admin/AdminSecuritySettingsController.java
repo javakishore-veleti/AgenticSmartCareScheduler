@@ -1,5 +1,6 @@
 package com.agenticcare.web.controller.admin;
 
+import com.agenticcare.common.dto.admin.SecuritySettingRespDto;
 import com.agenticcare.dao.entity.SecuritySettingsEntity;
 import com.agenticcare.domain.admin.service.SecuritySettingsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,21 +26,21 @@ public class AdminSecuritySettingsController {
     }
 
     @GetMapping
-    @Operation(summary = "List all security settings")
-    public ResponseEntity<List<SecuritySettingsEntity>> getAll() {
+    @Operation(summary = "List all security settings (safe — no secrets exposed)")
+    public ResponseEntity<List<SecuritySettingRespDto>> getAll() {
         log.info(">>> GET /security-settings called");
         return ResponseEntity.ok(service.getAll());
     }
 
     @GetMapping("/type/{settingType}")
-    @Operation(summary = "List security settings by type (e.g., AWS_CLIENT_PROFILE)")
-    public ResponseEntity<List<SecuritySettingsEntity>> getByType(@PathVariable String settingType) {
+    @Operation(summary = "List security settings by type (safe)")
+    public ResponseEntity<List<SecuritySettingRespDto>> getByType(@PathVariable String settingType) {
         return ResponseEntity.ok(service.getByType(settingType));
     }
 
     @PostMapping
     @Operation(summary = "Create a new security setting")
-    public ResponseEntity<SecuritySettingsEntity> create(@RequestBody SecuritySettingsEntity entity) {
+    public ResponseEntity<SecuritySettingRespDto> create(@RequestBody SecuritySettingsEntity entity) {
         log.info(">>> POST /security-settings name={} type={}", entity.getSettingName(), entity.getSettingType());
         return ResponseEntity.ok(service.create(entity));
     }

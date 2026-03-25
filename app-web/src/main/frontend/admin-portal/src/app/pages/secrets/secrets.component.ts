@@ -113,7 +113,7 @@ import { AWS_REGIONS } from '../../services/aws-constants';
           <tr style="color: #e11d48;">
             <th>Name</th>
             <th>Type</th>
-            <th>Config</th>
+            <th>Summary</th>
             <th>Created</th>
             <th></th>
           </tr>
@@ -122,7 +122,7 @@ import { AWS_REGIONS } from '../../services/aws-constants';
           <tr *ngFor="let s of settings">
             <td class="fw-semibold">{{ s.settingName }}</td>
             <td><span class="badge" style="background: #e11d4822; color: #e11d48;">{{ s.settingType }}</span></td>
-            <td class="small text-muted" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">{{ maskConfig(s.configsJson) }}</td>
+            <td class="small text-muted">{{ s.summary }}</td>
             <td class="small">{{ s.createdAt | date:'short' }}</td>
             <td>
               <button class="btn btn-sm btn-outline-danger" (click)="deleteSetting(s.id)">
@@ -214,13 +214,5 @@ export class SecretsComponent implements OnInit {
 
   deleteSetting(id: number) {
     this.service.delete(id).subscribe({ next: () => this.loadSettings() });
-  }
-
-  maskConfig(json: string): string {
-    try {
-      const obj = JSON.parse(json);
-      if (obj.secretAccessKey) obj.secretAccessKey = '****';
-      return JSON.stringify(obj);
-    } catch { return json; }
   }
 }

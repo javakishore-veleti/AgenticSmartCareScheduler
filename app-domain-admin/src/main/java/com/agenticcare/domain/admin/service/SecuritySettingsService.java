@@ -1,38 +1,77 @@
 package com.agenticcare.domain.admin.service;
 
+import com.agenticcare.common.dto.admin.SecuritySettingRespDto;
 import com.agenticcare.dao.entity.SecuritySettingsEntity;
 import com.agenticcare.dao.repository.SecuritySettingsRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class SecuritySettingsService {
 
     private static final Logger log = LoggerFactory.getLogger(SecuritySettingsService.class);
     private final SecuritySettingsRepository repo;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SecuritySettingsService(SecuritySettingsRepository repo) {
         this.repo = repo;
     }
 
-    public List<SecuritySettingsEntity> getAll() {
-        return repo.findAll();
+    public List<SecuritySettingRespDto> getAll() {
+        return repo.findAll().stream().map(this::toSafeDto).collect(Collectors.toList());
     }
 
-    public List<SecuritySettingsEntity> getByType(String settingType) {
-        return repo.findBySettingType(settingType);
+    public List<SecuritySettingRespDto> getByType(String settingType) {
+        return repo.findBySettingType(settingType).stream().map(this::toSafeDto).collect(Collectors.toList());
     }
 
-    public SecuritySettingsEntity create(SecuritySettingsEntity entity) {
+    public SecuritySettingRespDto create(SecuritySettingsEntity entity) {
         log.info("Creating security setting: {} type={}", entity.getSettingName(), entity.getSettingType());
-        return repo.save(entity);
+        return toSafeDto(repo.save(entity));
     }
 
     public void delete(Long id) {
         log.info("Deleting security setting id={}", id);
         repo.deleteById(id);
+    }
+
+    private SecuritySettingRespDto toSafeDto(SecuritySettingsEntity entity) {
+        SecuritySettingRespDto dto = new SecuritySettingRespDto();
+        dto.setId(entity.getId());
+        dto.setSettingName(entity.getSettingName());
+        dto.setSettingType(entity.getSettingType());
+        dto.setCreatedBy(entity.getCreatedBy());
+        dto.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null);
+        dto.setUpdatedAt(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : null);
+        dto.setSummary(buildSafeSummary(entity));
+        return dto;
+    }
+
+    private String buildSafeSummary(SecuritySettingsEntity entity) {
+        try {
+            JsonNode config = objectMapper.readTree(entity.getConfigsJson());
+            String type = entity.getSettingType();
+
+            if ("AWS_CLIENT_PROFILE".equals(type)) {
+                String profile = config.has("profileName") ? config.get("profileName").asText() : "unknown";
+                String region = config.has("region") ? config.get("region").asText() : "";
+                return "Profile: " + profile + (region.isEmpty() ? "" : " (" + region + ")");
+            } else if ("AWS_CLIENT_CREDENTIALS".equals(type)) {
+                String keyId = config.has("accessKeyId") ? config.get("accessKeyId").asText() : "";
+                String masked = keyId.length() > 4 ? keyId.substring(0, 4) + "****" : "****";
+                String region = config.has("region") ? config.get("region").asText() : "";
+                return "Key: " + masked + (region.isEmpty() ? "" : " (" + region + ")");
+            } else {
+                return entity.getSettingType();
+            }
+        } catch (Exception e) {
+            return entity.getSettingType();
+        }
     }
 }

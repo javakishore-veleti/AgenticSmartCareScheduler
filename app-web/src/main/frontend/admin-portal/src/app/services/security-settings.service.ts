@@ -6,7 +6,7 @@ export interface SecuritySetting {
   id: number;
   settingName: string;
   settingType: string;
-  configsJson: string;
+  summary: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
