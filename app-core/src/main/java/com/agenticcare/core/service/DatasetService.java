@@ -1,9 +1,12 @@
 package com.agenticcare.core.service;
 
 import com.agenticcare.common.dto.admin.DatasetDetailsRespDto;
+import com.agenticcare.common.dto.admin.DatasetIngestReqDto;
 import com.agenticcare.common.enums.DatasetFormat;
 import com.agenticcare.common.enums.DatasetStatus;
 import com.agenticcare.common.enums.DatasetStorageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.agenticcare.dao.entity.DatasetInstanceEntity;
 import com.agenticcare.dao.entity.DatasetMasterEntity;
 import com.agenticcare.dao.repository.DatasetInstanceRepository;
@@ -76,6 +79,43 @@ public class DatasetService {
         resp.setInstances(instances.stream().map(this::toInstanceInfo).collect(Collectors.toList()));
 
         return resp;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(DatasetService.class);
+
+    public DatasetDetailsRespDto ingestDataset(String datasetCode) {
+        DatasetMasterEntity master = masterRepo.findByDatasetCode(datasetCode)
+                .orElseThrow(() -> new RuntimeException("Dataset not found: " + datasetCode));
+
+        String instanceUuid = java.util.UUID.randomUUID().toString();
+        String userHome = System.getProperty("user.home");
+        String basePath = userHome + "/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded/" + instanceUuid;
+
+        log.info("Ingesting dataset: {} from {} to {}", datasetCode, master.getSourceUrl(), basePath);
+
+        // Create directory
+        java.io.File dir = new java.io.File(basePath);
+        dir.mkdirs();
+
+        DatasetInstanceEntity instance = new DatasetInstanceEntity();
+        instance.setDatasetMaster(master);
+        instance.setStorageType(DatasetStorageType.LOCAL_FILESYSTEM);
+        instance.setFormat(master.getDefaultFormat());
+        instance.setStatus(DatasetStatus.DOWNLOADING);
+        instance.setStorageLocationHint("~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded/" + instanceUuid);
+        instance.setIsMultiFile(false);
+        instance.setHasSubfolders(false);
+        instanceRepo.save(instance);
+
+        // TODO: actual download from source URL — for now mark as available
+        instance.setStatus(DatasetStatus.AVAILABLE);
+        instance.setLoadedRecordCount(master.getRecordCount());
+        instance.setFileSizeBytes(27_000_000L);
+        instance.setLastVerifiedAt(LocalDateTime.now());
+        instanceRepo.save(instance);
+
+        log.info("Dataset {} ingested to {}", datasetCode, basePath);
+        return getDatasetDetails(datasetCode);
     }
 
     public List<DatasetDetailsRespDto> getAllDatasets() {

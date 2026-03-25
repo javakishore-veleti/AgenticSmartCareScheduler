@@ -57,8 +57,14 @@ import { DatasetService, DatasetDetails } from '../../services/dataset.service';
                 [style.background]="ds.instances.length > 0 ? '#16a34a22' : '#ea580c22'"
                 [style.color]="ds.instances.length > 0 ? '#16a34a' : '#ea580c'">
             <i class="bi" [class.bi-check-circle]="ds.instances.length > 0" [class.bi-x-circle]="ds.instances.length === 0"></i>
-            {{ ds.instances.length > 0 ? ds.instances.length + ' instance(s)' : 'Not downloaded' }}
+            {{ ds.instances.length > 0 ? ds.instances.length + ' instance(s)' : 'Not ingested' }}
           </span>
+          <button *ngIf="ds.instances.length === 0" class="btn btn-sm ms-2"
+                  style="background: linear-gradient(135deg, #0d9488, #4f46e5); color: white; border-radius: 8px;"
+                  (click)="ingestDataset(ds.datasetCode)" [disabled]="ingesting[ds.datasetCode]">
+            <i class="bi bi-cloud-download me-1"></i>
+            {{ ingesting[ds.datasetCode] ? 'Ingesting...' : 'Ingest Dataset' }}
+          </button>
         </div>
       </div>
       <div class="card-body">
@@ -148,6 +154,7 @@ export class DatasetsComponent implements OnInit {
   loading = true;
   seeding = false;
   seedMessage = '';
+  ingesting: { [key: string]: boolean } = {};
 
   constructor(private datasetService: DatasetService, private cdr: ChangeDetectorRef) {}
 
@@ -189,6 +196,24 @@ export class DatasetsComponent implements OnInit {
       error: (err) => {
         console.error('[DatasetsComponent] seed ERROR:', err);
         this.seeding = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  ingestDataset(datasetCode: string) {
+    this.ingesting[datasetCode] = true;
+    this.cdr.detectChanges();
+    console.log('[DatasetsComponent] ingesting', datasetCode);
+    this.datasetService.ingestDataset(datasetCode).subscribe({
+      next: (data) => {
+        console.log('[DatasetsComponent] ingest SUCCESS:', data);
+        this.ingesting[datasetCode] = false;
+        this.loadDatasets();
+      },
+      error: (err) => {
+        console.error('[DatasetsComponent] ingest ERROR:', err);
+        this.ingesting[datasetCode] = false;
         this.cdr.detectChanges();
       }
     });

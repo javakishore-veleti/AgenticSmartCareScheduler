@@ -48,4 +48,11 @@ public class AdminDatasetController {
         datasetService.seedDefaultDatasets();
         return ResponseEntity.ok(Map.of("status", "seeded", "message", "Default datasets registered successfully"));
     }
+
+    @PostMapping("/{datasetCode}/ingest")
+    @Operation(summary = "Ingest a dataset to local storage")
+    public ResponseEntity<DatasetDetailsRespDto> ingestDataset(@PathVariable String datasetCode) {
+        log.info(">>> POST /datasets/{}/ingest called", datasetCode);
+        return ResponseEntity.ok(datasetService.ingestDataset(datasetCode));
+    }
 }

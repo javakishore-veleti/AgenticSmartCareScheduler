@@ -49,4 +49,8 @@ export class DatasetService {
   seedDefaults(): Observable<any> {
     return this.http.post(`${this.baseUrl}/seed-defaults`, {});
   }
+
+  ingestDataset(datasetCode: string): Observable<DatasetDetails> {
+    return this.http.post<DatasetDetails>(`${this.baseUrl}/${datasetCode}/ingest`, {});
+  }
 }
