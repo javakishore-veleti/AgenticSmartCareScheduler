@@ -1,0 +1,26 @@
+{
+  "name": "agentic-smart-care-scheduler",
+  "version": "0.1.0",
+  "description": "Cloud-native multi-agent AI orchestration for healthcare appointment coordination",
+  "scripts": {
+    "install:customer": "cd app-web/src/main/frontend/customer-portal && npm install",
+    "install:admin": "cd app-web/src/main/frontend/admin-portal && npm install",
+    "install:all": "npm run install:customer && npm run install:admin",
+    "build:customer": "cd app-web/src/main/frontend/customer-portal && ng build --output-path=../../../resources/static/portal/customer",
+    "build:admin": "cd app-web/src/main/frontend/admin-portal && ng build --output-path=../../../resources/static/portal/admin",
+    "build:ui": "npm run build:customer && npm run build:admin",
+    "build:java": "mvn clean package -DskipTests",
+    "build:all": "npm run build:ui && npm run build:java",
+    "start:ui:customer": "cd app-web/src/main/frontend/customer-portal && ng serve --port 4200",
+    "start:ui:admin": "cd app-web/src/main/frontend/admin-portal && ng serve --port 4201",
+    "start:spring": "mvn -pl app-web spring-boot:run",
+    "start": "npm run build:ui && npm run start:spring",
+    "dev:customer": "concurrently \"npm run start:spring\" \"npm run start:ui:customer\"",
+    "dev:admin": "concurrently \"npm run start:spring\" \"npm run start:ui:admin\"",
+    "test:java": "mvn test",
+    "clean": "mvn clean && rm -rf app-web/src/main/resources/static/portal"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

@@ -30,18 +30,10 @@
         <module>app-common</module>
         <module>app-dao</module>
         <module>app-core</module>
-        <module>app-web</module>
         <module>app-wfs</module>
-        <module>app-cloud-aws-wfs</module>
-        <module>app-cloud-aws-ai</module>
-        <module>app-cloud-aws-bedrock</module>
-        <module>app-cloud-aws-ml</module>
-        <module>app-cloud-aws-agents</module>
-        <module>app-agent-patient</module>
-        <module>app-agent-communication</module>
-        <module>app-agent-provider</module>
-        <module>app-agent-resource</module>
-        <module>app-agent-audit</module>
+        <module>app-cloud-integration</module>
+        <module>app-agents</module>
+        <module>app-web</module>
     </modules>
 
     <dependencyManagement>
