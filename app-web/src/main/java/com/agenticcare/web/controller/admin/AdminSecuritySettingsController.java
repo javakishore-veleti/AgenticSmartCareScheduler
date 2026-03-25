@@ -45,6 +45,20 @@ public class AdminSecuritySettingsController {
         return ResponseEntity.ok(service.create(entity));
     }
 
+    @GetMapping("/{id}/edit-info")
+    @Operation(summary = "Get safe fields for editing (no secrets)")
+    public ResponseEntity<SecuritySettingRespDto> getEditInfo(@PathVariable Long id) {
+        log.info(">>> GET /security-settings/{}/edit-info called", id);
+        return ResponseEntity.ok(service.getEditInfo(id));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a security setting")
+    public ResponseEntity<SecuritySettingRespDto> update(@PathVariable Long id, @RequestBody SecuritySettingsEntity entity) {
+        log.info(">>> PUT /security-settings/{} name={}", id, entity.getSettingName());
+        return ResponseEntity.ok(service.update(id, entity));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a security setting")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {

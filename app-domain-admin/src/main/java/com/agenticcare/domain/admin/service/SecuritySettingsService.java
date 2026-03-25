@@ -36,6 +36,34 @@ public class SecuritySettingsService {
         return toSafeDto(repo.save(entity));
     }
 
+    public SecuritySettingRespDto getEditInfo(Long id) {
+        SecuritySettingsEntity entity = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Setting not found: " + id));
+        SecuritySettingRespDto dto = toSafeDto(entity);
+        // For edit, include non-secret config fields
+        try {
+            JsonNode config = objectMapper.readTree(entity.getConfigsJson());
+            if ("AWS_CLIENT_PROFILE".equals(entity.getSettingType())) {
+                dto.setSummary(config.has("profileName") ? config.get("profileName").asText() : "");
+            } else if ("AWS_CLIENT_CREDENTIALS".equals(entity.getSettingType())) {
+                // Only return region, never keys
+                dto.setSummary(config.has("region") ? config.get("region").asText() : "");
+            }
+        } catch (Exception ignored) {}
+        return dto;
+    }
+
+    public SecuritySettingRespDto update(Long id, SecuritySettingsEntity updated) {
+        SecuritySettingsEntity entity = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Setting not found: " + id));
+        entity.setSettingName(updated.getSettingName());
+        if (updated.getConfigsJson() != null && !updated.getConfigsJson().isBlank()) {
+            entity.setConfigsJson(updated.getConfigsJson());
+        }
+        log.info("Updated security setting id={} name={}", id, entity.getSettingName());
+        return toSafeDto(repo.save(entity));
+    }
+
     public void delete(Long id) {
         log.info("Deleting security setting id={}", id);
         repo.deleteById(id);

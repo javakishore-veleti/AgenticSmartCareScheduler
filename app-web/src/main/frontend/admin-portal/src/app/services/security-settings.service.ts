@@ -30,6 +30,14 @@ export class SecuritySettingsService {
     return this.http.post<SecuritySetting>(this.baseUrl, setting);
   }
 
+  getEditInfo(id: number): Observable<SecuritySetting> {
+    return this.http.get<SecuritySetting>(`${this.baseUrl}/${id}/edit-info`);
+  }
+
+  update(id: number, setting: any): Observable<SecuritySetting> {
+    return this.http.put<SecuritySetting>(`${this.baseUrl}/${id}`, setting);
+  }
+
   delete(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/${id}`);
   }

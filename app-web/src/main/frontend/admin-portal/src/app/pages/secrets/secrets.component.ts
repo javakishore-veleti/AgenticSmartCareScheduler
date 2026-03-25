@@ -2,13 +2,14 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { SecuritySettingsService, SecuritySetting } from '../../services/security-settings.service';
 import { AWS_REGIONS } from '../../services/aws-constants';
 
 @Component({
   selector: 'app-secrets',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <h2 class="fw-bold mb-4" style="color: #e11d48;">
       <i class="bi bi-shield-lock me-2"></i>Security Settings
@@ -125,7 +126,10 @@ import { AWS_REGIONS } from '../../services/aws-constants';
             <td class="small text-muted">{{ s.summary }}</td>
             <td class="small">{{ s.createdAt | date:'short' }}</td>
             <td>
-              <button class="btn btn-sm btn-outline-danger" (click)="deleteSetting(s.id)">
+              <a [routerLink]="['/secrets', s.id, 'edit']" class="btn btn-sm me-1" style="background: #4f46e522; color: #4f46e5; border-radius: 6px;">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button class="btn btn-sm btn-outline-danger" style="border-radius: 6px;" (click)="deleteSetting(s.id)">
                 <i class="bi bi-trash"></i>
               </button>
             </td>

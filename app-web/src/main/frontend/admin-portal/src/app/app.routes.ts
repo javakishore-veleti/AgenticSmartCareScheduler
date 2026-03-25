@@ -8,6 +8,7 @@ import { DatasetInstancesComponent } from './pages/dataset-instances/dataset-ins
 import { DigitalTwinComponent } from './pages/digital-twin/digital-twin.component';
 import { AuditComponent } from './pages/audit/audit.component';
 import { SecretsComponent } from './pages/secrets/secrets.component';
+import { SecretEditComponent } from './pages/secret-edit/secret-edit.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 
 export const routes: Routes = [
@@ -19,6 +20,7 @@ export const routes: Routes = [
   { path: 'dataset-instances', component: DatasetInstancesComponent },
   { path: 'digital-twin', component: DigitalTwinComponent },
   { path: 'secrets', component: SecretsComponent },
+  { path: 'secrets/:id/edit', component: SecretEditComponent },
   { path: 'audit', component: AuditComponent },
   { path: 'settings', component: SettingsComponent },
   { path: '**', redirectTo: '' }
