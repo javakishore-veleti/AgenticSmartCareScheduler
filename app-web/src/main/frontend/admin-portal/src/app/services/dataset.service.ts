@@ -34,7 +34,7 @@ export interface DatasetDetails {
 
 @Injectable({ providedIn: 'root' })
 export class DatasetService {
-  private baseUrl = '/smart-care/api/admin/v1/analytics/datasets';
+  private baseUrl = window.location.origin + '/smart-care/api/admin/v1/analytics/datasets';
 
   constructor(private http: HttpClient) {}
 
