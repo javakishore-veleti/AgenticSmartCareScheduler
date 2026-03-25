@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DatasetService, DatasetDetails } from '../../services/dataset.service';
 
@@ -149,7 +149,7 @@ export class DatasetsComponent implements OnInit {
   seeding = false;
   seedMessage = '';
 
-  constructor(private datasetService: DatasetService) {}
+  constructor(private datasetService: DatasetService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     console.log('[DatasetsComponent] ngOnInit called');
@@ -164,10 +164,12 @@ export class DatasetsComponent implements OnInit {
         console.log('[DatasetsComponent] SUCCESS, data:', data);
         this.datasets = data;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('[DatasetsComponent] ERROR:', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }
