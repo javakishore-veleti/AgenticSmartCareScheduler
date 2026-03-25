@@ -1,5 +1,13 @@
 # AgenticSmartCareScheduler
 
+## IMPORTANT — Read These Files First
+Before scanning the codebase, read these files for full context:
+1. **CLAUDE.md** (this file) — architecture, agents, dataset, AWS stack
+2. **CodingConventions.md** — ExecCtx/ReqDto/RespDto pattern, module structure, naming, Spring AI patterns
+3. **DevelopmentPlan.md** — 5-phase plan, module layout, project structure, scenarios
+
+These three files contain everything needed to understand and contribute to this project without scanning the full codebase.
+
 ## Project Context
 
 This is the implementation repo for a cloud-native, multi-agent AI orchestration framework that addresses healthcare appointment no-shows through context-aware communication. The framework is described in an IEEE ICTS4eHealth 2026 conference paper.
