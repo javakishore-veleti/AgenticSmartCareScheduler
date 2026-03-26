@@ -40,46 +40,50 @@ public class WorkflowDefinitionService {
     }
 
     public void seedDefaults() {
-        seedOne("noshow_risk_scoring", "No-Show Risk Scoring",
-                "PCA agent invokes Bedrock-hosted ML model to predict no-show risk (R_p) per patient. "
-                + "Uses SageMaker endpoint for real-time inference. Outputs risk distribution and model metrics.",
-                "PCA (Patient Context Agent)",
-                "Bedrock Agents, SageMaker Endpoints, S3, CloudWatch",
-                "Spring AI @Tool, Bedrock Claude, SageMaker XGBoost, ONNX Runtime",
-                "VI. Evaluation");
-
-        seedOne("patient_context_classification", "Patient Context Classification",
-                "PCA agent uses Bedrock Claude to classify patient context state (C_p) from appointment time, "
-                + "behavioral signals, and R_p score. LLM reasons over patient profile to assign REACHABLE_MOBILE, "
-                + "REACHABLE_STATIONARY, or UNREACHABLE.",
-                "PCA (Patient Context Agent)",
-                "Bedrock Agents, Bedrock Knowledge Bases, Lambda, EventBridge",
-                "Spring AI ChatClient, Bedrock Claude, @Tool annotations",
-                "V. Methodology");
-
-        seedOne("channel_distribution_analysis", "Channel Distribution Analysis",
-                "COA agent selects optimal outreach channel per C_p state using Bedrock-powered reasoning. "
-                + "Computes IVR/SMS/Callback distribution. Generates visualization for paper Fig. 5.",
-                "PCA \u2192 COA (Communication Orchestration Agent)",
-                "Bedrock Agents, Connect, SNS, EventBridge, S3",
+        seedOne("patient_outreach_orchestration", "Patient Outreach Orchestration",
+                "End-to-end agentic pipeline: PCA assesses patient context and risk, "
+                + "COA selects optimal channel (IVR/SMS/Callback) based on C_p state, "
+                + "then executes live outreach via Connect or SNS. The core workflow of the system.",
+                "PCA \u2192 COA (Full Pipeline)",
+                "Bedrock Agents, Connect, SNS, EventBridge, Lambda",
                 "Spring AI ChatClient, Bedrock Claude, @Tool for Connect/SNS",
-                "VII. Results \u2014 Fig. 5");
+                "V. Methodology, VII. Results");
 
-        seedOne("outreach_effectiveness_eval", "Outreach Effectiveness Evaluation",
-                "ACA agent evaluates multi-agent outreach strategy vs SMS-only baseline. "
-                + "Uses Bedrock to generate natural-language insights on reachability improvement.",
-                "PCA \u2192 COA \u2192 ACA (Audit & Compliance Agent)",
+        seedOne("smart_appointment_confirmation", "Smart Appointment Confirmation",
+                "COA agent conducts live patient interaction: places IVR call or sends SMS deep-link, "
+                + "interprets patient response using Bedrock Claude (confirm, reschedule, cancel), "
+                + "updates appointment status, and escalates non-responders to callback queue.",
+                "COA (Communication Orchestration Agent)",
+                "Bedrock Agents, Connect Contact Flows, SNS, Lambda",
+                "Spring AI ChatClient, Bedrock Claude, @Tool for response parsing",
+                "V. Methodology \u2014 Section B");
+
+        seedOne("waitlist_slot_fulfillment", "Waitlist Slot Fulfillment",
+                "When PCA predicts a likely no-show (R_p > 0.65), RRA agent proactively identifies "
+                + "waitlisted patients, uses Bedrock to rank candidates by urgency and travel feasibility, "
+                + "then triggers COA to offer the slot via the patient's preferred channel.",
+                "PCA \u2192 RRA \u2192 COA (Cross-Agent Coordination)",
+                "Bedrock Agents, HealthLake (FHIR R4), Step Functions, Connect",
+                "Spring AI ChatClient, Bedrock Claude, @Tool for HealthLake/StepFn",
+                "VII. Results");
+
+        seedOne("provider_schedule_optimization", "Provider Schedule Optimization",
+                "RRA agent analyzes predicted no-show patterns across provider schedules, "
+                + "uses Bedrock reasoning to recommend double-booking for high-risk slots, "
+                + "buffer adjustments, and provider workload rebalancing. Publishes recommendations to PSA.",
+                "PCA \u2192 RRA \u2192 PSA (Provider Scheduling Agent)",
+                "Bedrock Agents, HealthLake (FHIR R4), EventBridge, Lambda",
+                "Spring AI ChatClient, Bedrock Claude, @Tool for FHIR schedule queries",
+                "VII. Results");
+
+        seedOne("outreach_compliance_audit", "Outreach Compliance Audit",
+                "ACA agent reviews all outreach interactions for HIPAA compliance, patient consent verification, "
+                + "and communication frequency limits. Uses Bedrock to flag anomalies and generate "
+                + "natural-language audit summaries. Logs to OpenSearch for dashboard visibility.",
+                "ACA (Audit & Compliance Agent)",
                 "Bedrock Agents, OpenSearch, S3, CloudWatch",
                 "Spring AI ChatClient, Bedrock Claude, OpenSearch vector search",
                 "VII. Discussion");
-
-        seedOne("slot_reallocation_simulation", "Appointment Slot Reallocation",
-                "RRA agent identifies high-risk slots and uses Bedrock reasoning to simulate "
-                + "waitlist promotion and provider schedule optimization via HealthLake FHIR queries.",
-                "PCA \u2192 RRA (Resource Reallocation Agent)",
-                "Bedrock Agents, HealthLake (FHIR R4), Step Functions, Lambda",
-                "Spring AI ChatClient, Bedrock Claude, @Tool for HealthLake/StepFn",
-                "VII. Results");
 
         log.info("Seeded default workflow definitions");
     }

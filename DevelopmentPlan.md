@@ -241,11 +241,11 @@ After 5 hours:
 
 | Workflow | Agent Pipeline | AWS Services | Agentic AI Tech Stack | Paper Section |
 |---|---|---|---|---|
-| **No-Show Risk Scoring** | PCA (Patient Context Agent) | Bedrock Agents, SageMaker Endpoints, S3 | Spring AI @Tool, Bedrock Claude, SageMaker XGBoost, ONNX Runtime | VI. Evaluation |
-| **Patient Context Classification** | PCA (Patient Context Agent) | Bedrock Agents, Bedrock Knowledge Bases, Lambda, EventBridge | Spring AI ChatClient, Bedrock Claude, @Tool annotations | V. Methodology |
-| **Channel Distribution Analysis** | PCA → COA (Communication Orchestration Agent) | Bedrock Agents, Connect, SNS, EventBridge, S3 | Spring AI ChatClient, Bedrock Claude, @Tool for Connect/SNS | VII. Results — Fig. 5 |
-| **Outreach Effectiveness Evaluation** | PCA → COA → ACA (Audit & Compliance Agent) | Bedrock Agents, OpenSearch, S3, CloudWatch | Spring AI ChatClient, Bedrock Claude, OpenSearch vector search | VII. Discussion |
-| **Appointment Slot Reallocation** | PCA → RRA (Resource Reallocation Agent) | Bedrock Agents, HealthLake (FHIR R4), Step Functions, Lambda | Spring AI ChatClient, Bedrock Claude, @Tool for HealthLake/StepFn | VII. Results |
+| **Patient Outreach Orchestration** | PCA → COA (Full Pipeline) | Bedrock Agents, Connect, SNS, EventBridge, Lambda | Spring AI ChatClient, Bedrock Claude, @Tool for Connect/SNS | V. Methodology, VII. Results |
+| **Smart Appointment Confirmation** | COA (Communication Orchestration Agent) | Bedrock Agents, Connect Contact Flows, SNS, Lambda | Spring AI ChatClient, Bedrock Claude, @Tool for response parsing | V. Methodology — Section B |
+| **Waitlist Slot Fulfillment** | PCA → RRA → COA (Cross-Agent) | Bedrock Agents, HealthLake (FHIR R4), Step Functions, Connect | Spring AI ChatClient, Bedrock Claude, @Tool for HealthLake/StepFn | VII. Results |
+| **Provider Schedule Optimization** | PCA → RRA → PSA (Provider Scheduling) | Bedrock Agents, HealthLake (FHIR R4), EventBridge, Lambda | Spring AI ChatClient, Bedrock Claude, @Tool for FHIR queries | VII. Results |
+| **Outreach Compliance Audit** | ACA (Audit & Compliance Agent) | Bedrock Agents, OpenSearch, S3, CloudWatch | Spring AI ChatClient, Bedrock Claude, OpenSearch vector search | VII. Discussion |
 
 ### Admin Portal — Stub Pages to Implement — PENDING
 - Agents page (currently "coming soon")
