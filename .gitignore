@@ -42,6 +42,3 @@ models/*.joblib
 target/
 node_modules/
 
-# Airflow
-DevOps/Local/Airflow/logs/*
-!DevOps/Local/Airflow/logs/.gitkeep

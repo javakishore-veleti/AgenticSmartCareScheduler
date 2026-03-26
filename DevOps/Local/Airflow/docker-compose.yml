@@ -13,9 +13,9 @@ x-airflow-common: &airflow-common
     _AIRFLOW_WWW_USER_USERNAME: admin
     _AIRFLOW_WWW_USER_PASSWORD: admin
   volumes:
-    - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
+    - ../../../DataManagement/Airflow/dags:/opt/airflow/dags
+    - ../../../DataManagement/Airflow/plugins:/opt/airflow/plugins
+    - airflow-logs:/opt/airflow/logs
   depends_on:
     airflow-postgres:
       condition: service_healthy
@@ -77,3 +77,4 @@ services:
 
 volumes:
   airflow-pg-data:
+  airflow-logs:
