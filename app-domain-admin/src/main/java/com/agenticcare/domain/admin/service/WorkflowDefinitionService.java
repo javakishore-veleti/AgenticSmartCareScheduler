@@ -39,11 +39,34 @@ public class WorkflowDefinitionService {
         return toDto(repo.findById(id).orElseThrow(() -> new RuntimeException("Definition not found: " + id)));
     }
 
+    public void seedDefaults() {
+        seedOne("cp_simulation", "Context State Simulation",
+                "Assigns context states (C_p) to patient records based on appointment time, SMS receipt, and risk score. Produces channel distribution stats.");
+        seedOne("model_retrain", "XGBoost Model Retrain",
+                "Retrains the PCA risk model (XGBoost) on the Medical Appointment No-Show dataset. Outputs F1, AUC, confusion matrix, and saved model.");
+        seedOne("data_quality_check", "Data Quality Check",
+                "Validates dataset integrity: null checks, range validation, duplicate detection, schema conformance. Produces quality report.");
+        log.info("Seeded default workflow definitions");
+    }
+
+    private void seedOne(String key, String displayName, String description) {
+        if (repo.findByWorkflowKey(key).isPresent()) {
+            log.info("Workflow definition already exists: {}", key);
+            return;
+        }
+        WorkflowDefinitionMasterEntity entity = new WorkflowDefinitionMasterEntity();
+        entity.setWorkflowKey(key);
+        entity.setDisplayName(displayName);
+        entity.setDescription(description);
+        entity.setStatus("ACTIVE");
+        repo.save(entity);
+        log.info("Seeded workflow definition: {}", key);
+    }
+
     public Map<String, Object> create(Map<String, Object> req) {
         WorkflowDefinitionMasterEntity entity = new WorkflowDefinitionMasterEntity();
         entity.setWorkflowKey((String) req.get("workflowKey"));
         entity.setDisplayName((String) req.get("displayName"));
-        entity.setCategory((String) req.get("category"));
         entity.setDescription((String) req.get("description"));
         entity.setParametersSchema((String) req.get("parametersSchema"));
         entity.setStatus("ACTIVE");
@@ -55,7 +78,6 @@ public class WorkflowDefinitionService {
         WorkflowDefinitionMasterEntity entity = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Definition not found: " + id));
         if (req.containsKey("displayName")) entity.setDisplayName((String) req.get("displayName"));
-        if (req.containsKey("category")) entity.setCategory((String) req.get("category"));
         if (req.containsKey("description")) entity.setDescription((String) req.get("description"));
         if (req.containsKey("parametersSchema")) entity.setParametersSchema((String) req.get("parametersSchema"));
         if (req.containsKey("status")) entity.setStatus((String) req.get("status"));
@@ -103,13 +125,11 @@ public class WorkflowDefinitionService {
         m.put("id", e.getId());
         m.put("workflowKey", e.getWorkflowKey());
         m.put("displayName", e.getDisplayName());
-        m.put("category", e.getCategory());
         m.put("description", e.getDescription());
         m.put("parametersSchema", e.getParametersSchema());
         m.put("status", e.getStatus());
         m.put("createdAt", e.getCreatedAt());
         m.put("updatedAt", e.getUpdatedAt());
-        // include compatible engines
         List<Map<String, Object>> engines = mappingRepo.findByWorkflowDefinitionIdAndStatus(e.getId(), "ACTIVE")
                 .stream().map(this::mappingToDto).collect(Collectors.toList());
         m.put("engines", engines);

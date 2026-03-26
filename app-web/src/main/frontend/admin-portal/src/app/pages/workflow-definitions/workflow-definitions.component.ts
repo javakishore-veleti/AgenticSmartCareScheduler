@@ -13,37 +13,39 @@ import { HttpClient } from '@angular/common/http';
       <h2 class="fw-bold" style="color: #7c3aed;">
         <i class="bi bi-diagram-3 me-2"></i>Workflow Definitions
       </h2>
-      <button class="btn btn-sm" style="background: #7c3aed22; color: #7c3aed; border-radius: 8px;" (click)="loadDefinitions()">
-        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-      </button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm" style="background: #7c3aed; color: white; border-radius: 8px;"
+                (click)="seedDefaults()" [disabled]="seeding">
+          <i class="bi bi-cloud-download me-1"></i>{{ seeding ? 'Seeding...' : 'Register Default Workflows' }}
+        </button>
+        <button class="btn btn-sm" style="background: #7c3aed22; color: #7c3aed; border-radius: 8px;" (click)="loadDefinitions()">
+          <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Success message -->
+    <div *ngIf="successMsg" class="alert alert-success alert-dismissible fade show">
+      {{ successMsg }}
+      <button type="button" class="btn-close" (click)="successMsg = ''"></button>
     </div>
 
     <!-- Create Form -->
     <div class="card mb-4" style="border-left: 4px solid #7c3aed;">
       <div class="card-header bg-white border-0 pt-3">
-        <h5 class="fw-bold"><i class="bi bi-plus-circle me-2" style="color: #7c3aed;"></i>Register Workflow</h5>
+        <h5 class="fw-bold"><i class="bi bi-plus-circle me-2" style="color: #7c3aed;"></i>Register Custom Workflow</h5>
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label fw-semibold">Workflow Key</label>
-            <input class="form-control" [(ngModel)]="newDef.workflowKey" placeholder="e.g. cp_simulation">
+            <input class="form-control" [(ngModel)]="newDef.workflowKey" placeholder="e.g. custom_etl_pipeline">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label fw-semibold">Display Name</label>
-            <input class="form-control" [(ngModel)]="newDef.displayName" placeholder="e.g. Context State Simulation">
+            <input class="form-control" [(ngModel)]="newDef.displayName" placeholder="e.g. Custom ETL Pipeline">
           </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Category</label>
-            <select class="form-select" [(ngModel)]="newDef.category">
-              <option value="">Select...</option>
-              <option value="ANALYTICS">Analytics</option>
-              <option value="ML_TRAINING">ML Training</option>
-              <option value="DATA_PIPELINE">Data Pipeline</option>
-              <option value="ETL">ETL</option>
-            </select>
-          </div>
-          <div class="col-md-3 d-flex align-items-end">
+          <div class="col-md-4 d-flex align-items-end">
             <button class="btn w-100" style="background: #7c3aed; color: white; border-radius: 8px;"
                     (click)="create()" [disabled]="creating || !newDef.workflowKey || !newDef.displayName">
               <i class="bi bi-plus-circle me-1"></i>{{ creating ? 'Creating...' : 'Register' }}
@@ -67,7 +69,7 @@ import { HttpClient } from '@angular/common/http';
       <div class="card-body text-center py-5">
         <i class="bi bi-diagram-3 fs-1" style="color: #7c3aed; opacity: 0.5;"></i>
         <h5 class="mt-3 fw-bold">No Workflow Definitions</h5>
-        <p class="text-muted">Register product workflows above.</p>
+        <p class="text-muted">Click "Register Default Workflows" to seed the product workflows, or register a custom one above.</p>
       </div>
     </div>
 
@@ -80,7 +82,6 @@ import { HttpClient } from '@angular/common/http';
               <div>
                 <h5 class="fw-bold mb-1" style="color: #7c3aed;">{{ d.displayName }}</h5>
                 <code class="small" style="color: #4f46e5;">{{ d.workflowKey }}</code>
-                <span *ngIf="d.category" class="badge ms-2" style="background: #ede9fe; color: #7c3aed;">{{ d.category }}</span>
               </div>
               <div>
                 <span class="badge" [style.background]="d.status === 'ACTIVE' ? '#d1fae5' : '#fee2e2'"
@@ -131,7 +132,9 @@ export class WorkflowDefinitionsComponent implements OnInit {
   engines: any[] = [];
   loading = true;
   creating = false;
-  newDef = { workflowKey: '', displayName: '', category: '', description: '' };
+  seeding = false;
+  successMsg = '';
+  newDef = { workflowKey: '', displayName: '', description: '' };
   addMappingState: { [defId: number]: { engineId: string; engineWorkflowRef: string } } = {};
 
   private baseUrl = window.location.origin + '/smart-care/api/admin/v1/workflow-definitions';
@@ -167,12 +170,24 @@ export class WorkflowDefinitionsComponent implements OnInit {
     });
   }
 
+  seedDefaults() {
+    this.seeding = true;
+    this.http.post(`${this.baseUrl}/seed-defaults`, {}).subscribe({
+      next: () => {
+        this.seeding = false;
+        this.successMsg = 'Default workflows registered successfully!';
+        this.loadDefinitions();
+      },
+      error: () => { this.seeding = false; this.cdr.detectChanges(); }
+    });
+  }
+
   create() {
     this.creating = true;
     this.http.post(this.baseUrl, this.newDef).subscribe({
       next: () => {
         this.creating = false;
-        this.newDef = { workflowKey: '', displayName: '', category: '', description: '' };
+        this.newDef = { workflowKey: '', displayName: '', description: '' };
         this.loadDefinitions();
       },
       error: () => { this.creating = false; this.cdr.detectChanges(); }

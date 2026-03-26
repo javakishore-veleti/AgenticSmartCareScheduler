@@ -22,9 +22,6 @@ public class WorkflowDefinitionMasterEntity {
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
-    @Column(name = "category")
-    private String category;  // ANALYTICS, ML_TRAINING, DATA_PIPELINE, ETL
-
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

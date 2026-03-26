@@ -23,6 +23,14 @@ public class AdminWorkflowDefinitionController {
         this.service = service;
     }
 
+    @PostMapping("/seed-defaults")
+    @Operation(summary = "Seed default workflow definitions from product DAGs")
+    public ResponseEntity<Map<String, String>> seedDefaults() {
+        log.info(">>> POST /workflow-definitions/seed-defaults called");
+        service.seedDefaults();
+        return ResponseEntity.ok(Map.of("status", "seeded"));
+    }
+
     @GetMapping
     @Operation(summary = "List all workflow definitions")
     public ResponseEntity<List<Map<String, Object>>> getAll() {

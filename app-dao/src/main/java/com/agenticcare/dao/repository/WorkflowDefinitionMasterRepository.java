@@ -10,6 +10,5 @@ import java.util.Optional;
 @Repository
 public interface WorkflowDefinitionMasterRepository extends JpaRepository<WorkflowDefinitionMasterEntity, Long> {
     Optional<WorkflowDefinitionMasterEntity> findByWorkflowKey(String workflowKey);
-    List<WorkflowDefinitionMasterEntity> findByCategory(String category);
     List<WorkflowDefinitionMasterEntity> findByStatus(String status);
 }
