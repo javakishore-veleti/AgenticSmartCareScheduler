@@ -1,0 +1,43 @@
+{
+  "dataset": "Medical Appointment No-Show (Kaggle)",
+  "total_records": 71959,
+  "no_show_rate": 28.5,
+  "context_state_distribution": {
+    "REACHABLE_MOBILE": {
+      "count": 34769,
+      "percentage": 48.3
+    },
+    "REACHABLE_STATIONARY": {
+      "count": 35831,
+      "percentage": 49.8
+    },
+    "UNREACHABLE": {
+      "count": 1359,
+      "percentage": 1.9
+    }
+  },
+  "channel_distribution": {
+    "VOICE_IVR": {
+      "count": 34769,
+      "percentage": 48.3
+    },
+    "SMS_DEEPLINK": {
+      "count": 35831,
+      "percentage": 49.8
+    },
+    "CALLBACK": {
+      "count": 1359,
+      "percentage": 1.9
+    }
+  },
+  "noshow_rate_by_context": {
+    "REACHABLE_MOBILE": 27.0,
+    "REACHABLE_STATIONARY": 29.1,
+    "UNREACHABLE": 50.3
+  },
+  "baseline_comparison": {
+    "sms_only_reachability": 54.6,
+    "proposed_reachability": 77.1,
+    "improvement_pp": 22.6
+  }
+}
