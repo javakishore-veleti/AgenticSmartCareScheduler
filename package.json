@@ -47,6 +47,10 @@
     "docker:down": "bash DevOps/Local/docker-all-down.sh",
     "docker:status": "bash DevOps/Local/docker-all-status.sh",
 
+    "docker:analytics:up": "bash DevOps/Local/docker-analytics-up.sh",
+    "docker:analytics:down": "bash DevOps/Local/docker-analytics-down.sh",
+    "docker:analytics:status": "bash DevOps/Local/docker-analytics-status.sh",
+
     "infra:bootstrap": "gh workflow run bootstrap-infra.yml",
     "infra:deploy": "gh workflow run deploy-agents.yml",
     "infra:shutdown": "gh workflow run shutdown-infra.yml",
