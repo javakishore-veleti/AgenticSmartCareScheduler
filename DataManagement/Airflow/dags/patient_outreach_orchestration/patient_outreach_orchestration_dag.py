@@ -34,9 +34,22 @@ def assess_patient_context(**kwargs):
     update_run_status(run_id, "RUNNING")
 
     # Resolve dataset path (translates host path to container path, finds CSV)
-    csv_file = resolve_dataset_path(dataset_path)
+    csv_file = resolve_dataset_path(dataset_path) if dataset_path else None
     if not csv_file or not os.path.isfile(csv_file):
-        raise FileNotFoundError(f"Dataset not found. datasetPath={dataset_path}, resolved={csv_file}")
+        # Fallback: scan all known dataset locations for a CSV
+        fallback_base = "/home/airflow/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded"
+        print(f"PCA: datasetPath='{dataset_path}' not found, scanning {fallback_base}...")
+        csv_file = None
+        if os.path.isdir(fallback_base):
+            import glob
+            csvs = glob.glob(os.path.join(fallback_base, "**/*.csv"), recursive=True)
+            if csvs:
+                csv_file = csvs[0]
+                print(f"PCA: Found fallback CSV: {csv_file}")
+    if not csv_file or not os.path.isfile(csv_file):
+        raise FileNotFoundError(
+            f"No CSV dataset found. datasetPath='{dataset_path}'. "
+            f"Ensure dataset is ingested and the folder contains a CSV file.")
 
     print(f"PCA: Loading {csv_file}")
     df = pd.read_csv(csv_file)
