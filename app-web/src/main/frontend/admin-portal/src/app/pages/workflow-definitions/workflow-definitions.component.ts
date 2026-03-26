@@ -91,7 +91,23 @@ import { HttpClient } from '@angular/common/http';
                 </button>
               </div>
             </div>
-            <p *ngIf="d.description" class="text-muted small mb-3">{{ d.description }}</p>
+            <p *ngIf="d.description" class="text-muted small mb-2">{{ d.description }}</p>
+
+            <!-- Metadata badges -->
+            <div class="d-flex flex-wrap gap-2 mb-3" *ngIf="d.agentPipeline || d.awsServices || d.techStack || d.paperSection">
+              <span *ngIf="d.agentPipeline" class="badge" style="background: #ede9fe; color: #7c3aed;">
+                <i class="bi bi-robot me-1"></i>{{ d.agentPipeline }}
+              </span>
+              <span *ngIf="d.awsServices" class="badge" style="background: #fef3c7; color: #d97706;">
+                <i class="bi bi-cloud me-1"></i>{{ d.awsServices }}
+              </span>
+              <span *ngIf="d.techStack" class="badge" style="background: #dbeafe; color: #2563eb;">
+                <i class="bi bi-code-slash me-1"></i>{{ d.techStack }}
+              </span>
+              <span *ngIf="d.paperSection" class="badge" style="background: #d1fae5; color: #059669;">
+                <i class="bi bi-journal-text me-1"></i>{{ d.paperSection }}
+              </span>
+            </div>
 
             <!-- Compatible Engines -->
             <div class="mb-2">

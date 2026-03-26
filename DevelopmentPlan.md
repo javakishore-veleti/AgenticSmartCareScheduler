@@ -239,13 +239,13 @@ After 5 hours:
 
 ### Product Workflow Definitions
 
-| Workflow | Agent Pipeline | AWS Services | Tech Stack | Paper Section |
+| Workflow | Agent Pipeline | AWS Services | Agentic AI Tech Stack | Paper Section |
 |---|---|---|---|---|
-| **No-Show Risk Scoring** | PCA (Patient Context Agent) | Bedrock, SageMaker, S3 | XGBoost, scikit-learn, Python, pandas | VI. Evaluation |
-| **Patient Context Classification** | PCA (Patient Context Agent) | Bedrock, Lambda, EventBridge | Spring AI, ChatClient, Python | V. Methodology |
-| **Channel Distribution Analysis** | PCA → COA (Communication Orchestration Agent) | Connect, SNS, EventBridge, S3 | Python, matplotlib, pandas | VII. Results — Fig. 5 |
-| **Outreach Effectiveness Evaluation** | PCA → COA → ACA (Audit & Compliance Agent) | OpenSearch, S3, CloudWatch | Python, pandas, numpy, matplotlib | VII. Discussion |
-| **Appointment Slot Reallocation** | PCA → RRA (Resource Reallocation Agent) | HealthLake, Step Functions, Lambda, S3 | Spring AI, Python, pandas | VII. Results |
+| **No-Show Risk Scoring** | PCA (Patient Context Agent) | Bedrock Agents, SageMaker Endpoints, S3 | Spring AI @Tool, Bedrock Claude, SageMaker XGBoost, ONNX Runtime | VI. Evaluation |
+| **Patient Context Classification** | PCA (Patient Context Agent) | Bedrock Agents, Bedrock Knowledge Bases, Lambda, EventBridge | Spring AI ChatClient, Bedrock Claude, @Tool annotations | V. Methodology |
+| **Channel Distribution Analysis** | PCA → COA (Communication Orchestration Agent) | Bedrock Agents, Connect, SNS, EventBridge, S3 | Spring AI ChatClient, Bedrock Claude, @Tool for Connect/SNS | VII. Results — Fig. 5 |
+| **Outreach Effectiveness Evaluation** | PCA → COA → ACA (Audit & Compliance Agent) | Bedrock Agents, OpenSearch, S3, CloudWatch | Spring AI ChatClient, Bedrock Claude, OpenSearch vector search | VII. Discussion |
+| **Appointment Slot Reallocation** | PCA → RRA (Resource Reallocation Agent) | Bedrock Agents, HealthLake (FHIR R4), Step Functions, Lambda | Spring AI ChatClient, Bedrock Claude, @Tool for HealthLake/StepFn | VII. Results |
 
 ### Admin Portal — Stub Pages to Implement — PENDING
 - Agents page (currently "coming soon")

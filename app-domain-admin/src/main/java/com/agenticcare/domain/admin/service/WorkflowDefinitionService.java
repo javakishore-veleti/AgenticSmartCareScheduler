@@ -41,33 +41,51 @@ public class WorkflowDefinitionService {
 
     public void seedDefaults() {
         seedOne("noshow_risk_scoring", "No-Show Risk Scoring",
-                "Runs XGBoost model on patient appointment dataset to predict no-show risk probability (R_p) for each patient. "
-                + "Outputs risk scores, F1, AUC, precision, recall, and confusion matrix. Maps to PCA (Patient Context Agent) pipeline stage.");
+                "PCA agent invokes Bedrock-hosted ML model to predict no-show risk (R_p) per patient. "
+                + "Uses SageMaker endpoint for real-time inference. Outputs risk distribution and model metrics.",
+                "PCA (Patient Context Agent)",
+                "Bedrock Agents, SageMaker Endpoints, S3, CloudWatch",
+                "Spring AI @Tool, Bedrock Claude, SageMaker XGBoost, ONNX Runtime",
+                "VI. Evaluation");
 
         seedOne("patient_context_classification", "Patient Context Classification",
-                "Classifies each patient into a context state (C_p): REACHABLE_MOBILE (commuting hours), "
-                + "REACHABLE_STATIONARY (work hours), or UNREACHABLE (no SMS + high risk). "
-                + "Uses appointment time, SMS receipt history, and R_p score. Core input for channel selection.");
+                "PCA agent uses Bedrock Claude to classify patient context state (C_p) from appointment time, "
+                + "behavioral signals, and R_p score. LLM reasons over patient profile to assign REACHABLE_MOBILE, "
+                + "REACHABLE_STATIONARY, or UNREACHABLE.",
+                "PCA (Patient Context Agent)",
+                "Bedrock Agents, Bedrock Knowledge Bases, Lambda, EventBridge",
+                "Spring AI ChatClient, Bedrock Claude, @Tool annotations",
+                "V. Methodology");
 
         seedOne("channel_distribution_analysis", "Channel Distribution Analysis",
-                "Computes outreach channel distribution (Voice IVR, SMS Deep-Link, Callback) across C_p states. "
-                + "Produces the channel selection breakdown that demonstrates the COA (Communication Orchestration Agent) decision logic. "
-                + "Generates Fig. 5 for the IEEE paper.");
+                "COA agent selects optimal outreach channel per C_p state using Bedrock-powered reasoning. "
+                + "Computes IVR/SMS/Callback distribution. Generates visualization for paper Fig. 5.",
+                "PCA \u2192 COA (Communication Orchestration Agent)",
+                "Bedrock Agents, Connect, SNS, EventBridge, S3",
+                "Spring AI ChatClient, Bedrock Claude, @Tool for Connect/SNS",
+                "VII. Results \u2014 Fig. 5");
 
         seedOne("outreach_effectiveness_eval", "Outreach Effectiveness Evaluation",
-                "Compares the proposed multi-agent, context-aware outreach strategy against an SMS-only baseline. "
-                + "Measures reachability improvement, channel appropriateness, and estimated confirmation rate uplift. "
-                + "Provides evidence for the paper's core claim of improved patient engagement.");
+                "ACA agent evaluates multi-agent outreach strategy vs SMS-only baseline. "
+                + "Uses Bedrock to generate natural-language insights on reachability improvement.",
+                "PCA \u2192 COA \u2192 ACA (Audit & Compliance Agent)",
+                "Bedrock Agents, OpenSearch, S3, CloudWatch",
+                "Spring AI ChatClient, Bedrock Claude, OpenSearch vector search",
+                "VII. Discussion");
 
         seedOne("slot_reallocation_simulation", "Appointment Slot Reallocation",
-                "Identifies high-risk appointment slots (R_p > 0.65) and simulates the RRA (Resource Reallocation Agent) "
-                + "strategy: waitlist promotion, provider schedule optimization, and double-booking mitigation. "
-                + "Outputs slot utilization improvement metrics.");
+                "RRA agent identifies high-risk slots and uses Bedrock reasoning to simulate "
+                + "waitlist promotion and provider schedule optimization via HealthLake FHIR queries.",
+                "PCA \u2192 RRA (Resource Reallocation Agent)",
+                "Bedrock Agents, HealthLake (FHIR R4), Step Functions, Lambda",
+                "Spring AI ChatClient, Bedrock Claude, @Tool for HealthLake/StepFn",
+                "VII. Results");
 
         log.info("Seeded default workflow definitions");
     }
 
-    private void seedOne(String key, String displayName, String description) {
+    private void seedOne(String key, String displayName, String description,
+                         String agentPipeline, String awsServices, String techStack, String paperSection) {
         if (repo.findByWorkflowKey(key).isPresent()) {
             log.info("Workflow definition already exists: {}", key);
             return;
@@ -76,6 +94,10 @@ public class WorkflowDefinitionService {
         entity.setWorkflowKey(key);
         entity.setDisplayName(displayName);
         entity.setDescription(description);
+        entity.setAgentPipeline(agentPipeline);
+        entity.setAwsServices(awsServices);
+        entity.setTechStack(techStack);
+        entity.setPaperSection(paperSection);
         entity.setStatus("ACTIVE");
         repo.save(entity);
         log.info("Seeded workflow definition: {}", key);
@@ -144,6 +166,10 @@ public class WorkflowDefinitionService {
         m.put("workflowKey", e.getWorkflowKey());
         m.put("displayName", e.getDisplayName());
         m.put("description", e.getDescription());
+        m.put("agentPipeline", e.getAgentPipeline());
+        m.put("awsServices", e.getAwsServices());
+        m.put("techStack", e.getTechStack());
+        m.put("paperSection", e.getPaperSection());
         m.put("parametersSchema", e.getParametersSchema());
         m.put("status", e.getStatus());
         m.put("createdAt", e.getCreatedAt());

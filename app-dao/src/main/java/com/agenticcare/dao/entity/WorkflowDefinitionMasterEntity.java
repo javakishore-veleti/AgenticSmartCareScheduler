@@ -25,6 +25,18 @@ public class WorkflowDefinitionMasterEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "agent_pipeline")
+    private String agentPipeline;  // e.g. PCA, PCA → COA, PCA → RRA
+
+    @Column(name = "aws_services")
+    private String awsServices;  // e.g. Bedrock, SageMaker, S3
+
+    @Column(name = "tech_stack")
+    private String techStack;  // e.g. XGBoost, Spring AI, Python
+
+    @Column(name = "paper_section")
+    private String paperSection;  // e.g. VI. Evaluation, VII. Results
+
     @Column(name = "parameters_schema", columnDefinition = "TEXT")
     private String parametersSchema;  // JSON schema for workflow parameters
 
