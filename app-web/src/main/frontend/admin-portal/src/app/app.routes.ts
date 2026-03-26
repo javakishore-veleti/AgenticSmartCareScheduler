@@ -13,6 +13,9 @@ import { AuditComponent } from './pages/audit/audit.component';
 import { SecretsComponent } from './pages/secrets/secrets.component';
 import { SecretEditComponent } from './pages/secret-edit/secret-edit.component';
 import { SettingsComponent } from './pages/settings/settings.component';
+import { WorkflowEnginesComponent } from './pages/workflow-engines/workflow-engines.component';
+import { WorkflowDefinitionsComponent } from './pages/workflow-definitions/workflow-definitions.component';
+import { WorkflowRunsComponent } from './pages/workflow-runs/workflow-runs.component';
 
 export const routes: Routes = [
   { path: '', component: DashboardComponent },
@@ -27,6 +30,9 @@ export const routes: Routes = [
   { path: 'secrets/:id/edit', component: SecretEditComponent },
   { path: 'messages', component: MessagesTopicsComponent },
   { path: 'messages/:topicName', component: MessagesDetailComponent },
+  { path: 'workflow-engines', component: WorkflowEnginesComponent },
+  { path: 'workflow-definitions', component: WorkflowDefinitionsComponent },
+  { path: 'workflow-runs', component: WorkflowRunsComponent },
   { path: 'audit', component: AuditComponent },
   { path: 'settings', component: SettingsComponent },
   { path: '**', redirectTo: '' }
