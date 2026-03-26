@@ -93,9 +93,22 @@ public class WorkflowRunService {
         log.info("Submitted workflow run id={} definition={} engine={}",
                 entity.getId(), def.getWorkflowKey(), engine.getEngineName());
 
+        // Build parameters for engine, including dataset path if available
+        Map<String, Object> engineParams = new LinkedHashMap<>();
+        if (entity.getDatasetInstance() != null) {
+            engineParams.put("datasetPath", entity.getDatasetInstance().getStorageLocationHint());
+            engineParams.put("datasetInstanceId", entity.getDatasetInstance().getId());
+        }
+        engineParams.put("workflowKey", def.getWorkflowKey());
+        engineParams.put("workflowRunId", entity.getId());
+
+        // Output directory for this run's results
+        String outputDir = System.getProperty("user.home") + "/runtime_data/workflow_output/run_" + entity.getId();
+        engineParams.put("outputDir", outputDir);
+
         // Trigger async execution via the engine facade
         executeAsync(entity.getId(), engine.getEngineType(), engine.getBaseUrl(),
-                def.getWorkflowKey(), req);
+                def.getWorkflowKey(), engineParams);
 
         return toDto(entity);
     }
