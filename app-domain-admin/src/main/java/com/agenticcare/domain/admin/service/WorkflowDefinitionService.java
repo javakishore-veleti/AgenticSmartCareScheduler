@@ -9,6 +9,7 @@ import com.agenticcare.dao.repository.WorkflowEngineMasterRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,10 +32,12 @@ public class WorkflowDefinitionService {
         this.engineRepo = engineRepo;
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getAll() {
         return repo.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getById(Long id) {
         return toDto(repo.findById(id).orElseThrow(() -> new RuntimeException("Definition not found: " + id)));
     }
@@ -136,6 +139,7 @@ public class WorkflowDefinitionService {
 
     // --- Engine Mapping ---
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getEnginesForDefinition(Long definitionId) {
         return mappingRepo.findByWorkflowDefinitionId(definitionId).stream()
                 .map(this::mappingToDto).collect(Collectors.toList());

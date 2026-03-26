@@ -11,6 +11,7 @@ import com.agenticcare.dao.repository.WorkflowRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -37,19 +38,23 @@ public class WorkflowRunService {
         this.datasetInstanceRepo = datasetInstanceRepo;
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getAll() {
         return repo.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getById(Long id) {
         return toDto(repo.findById(id).orElseThrow(() -> new RuntimeException("Run not found: " + id)));
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getByDefinitionId(Long defId) {
         return repo.findByWorkflowDefinitionIdOrderByCreatedAtDesc(defId).stream()
                 .map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getByDatasetInstanceId(Long instanceId) {
         return repo.findByDatasetInstanceIdOrderByCreatedAtDesc(instanceId).stream()
                 .map(this::toDto).collect(Collectors.toList());
