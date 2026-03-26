@@ -228,10 +228,24 @@ After 5 hours:
 - ✅ Message broker on port 8081 with DataSeeder (7 user_profile_event messages)
 - ✅ `npm run start` launches both app (8080) and broker (8081) concurrently
 
-### Admin Portal — Workflow Engines — PENDING
-- Administration → Workflow Engine Definitions (Airflow, EMR, Databricks)
-- Administration → Workflow Engine Instances
-- Wire "Train Model" in Analytics → select workflow → select engine → submit
+### Admin Portal — Workflow Engines — **DONE**
+- ✅ Workflow Engines CRUD (Airflow, EMR, Databricks, Step Functions)
+- ✅ Workflow Definitions with engine mapping (many-to-many)
+- ✅ Workflow Runs with submit, status tracking, dataset instance selection
+- ✅ Sidebar: Workflows section (Engines, Definitions, Runs)
+- ✅ Docker Compose for Apache Airflow (port 8082)
+- ✅ DAGs in `DataManagement/Airflow/dags/` (product code, not infra)
+- ✅ Dockerfile for EKS/MWAA deployment
+
+### Product Workflow Definitions
+
+| Workflow | Agent Pipeline | AWS Services | Tech Stack | Paper Section |
+|---|---|---|---|---|
+| **No-Show Risk Scoring** | PCA (Patient Context Agent) | Bedrock, SageMaker, S3 | XGBoost, scikit-learn, Python, pandas | VI. Evaluation |
+| **Patient Context Classification** | PCA (Patient Context Agent) | Bedrock, Lambda, EventBridge | Spring AI, ChatClient, Python | V. Methodology |
+| **Channel Distribution Analysis** | PCA → COA (Communication Orchestration Agent) | Connect, SNS, EventBridge, S3 | Python, matplotlib, pandas | VII. Results — Fig. 5 |
+| **Outreach Effectiveness Evaluation** | PCA → COA → ACA (Audit & Compliance Agent) | OpenSearch, S3, CloudWatch | Python, pandas, numpy, matplotlib | VII. Discussion |
+| **Appointment Slot Reallocation** | PCA → RRA (Resource Reallocation Agent) | HealthLake, Step Functions, Lambda, S3 | Spring AI, Python, pandas | VII. Results |
 
 ### Admin Portal — Stub Pages to Implement — PENDING
 - Agents page (currently "coming soon")
