@@ -8,8 +8,11 @@ import com.agenticcare.dao.repository.DatasetInstanceRepository;
 import com.agenticcare.dao.repository.WorkflowDefinitionMasterRepository;
 import com.agenticcare.dao.repository.WorkflowEngineMasterRepository;
 import com.agenticcare.dao.repository.WorkflowRunRepository;
+import com.agenticcare.wfs.executor.WfEngineFacade;
+import com.agenticcare.wfs.executor.WfEngineFacadeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +30,18 @@ public class WorkflowRunService {
     private final WorkflowDefinitionMasterRepository defRepo;
     private final WorkflowEngineMasterRepository engineRepo;
     private final DatasetInstanceRepository datasetInstanceRepo;
+    private final WfEngineFacadeFactory facadeFactory;
 
     public WorkflowRunService(WorkflowRunRepository repo,
                               WorkflowDefinitionMasterRepository defRepo,
                               WorkflowEngineMasterRepository engineRepo,
-                              DatasetInstanceRepository datasetInstanceRepo) {
+                              DatasetInstanceRepository datasetInstanceRepo,
+                              WfEngineFacadeFactory facadeFactory) {
         this.repo = repo;
         this.defRepo = defRepo;
         this.engineRepo = engineRepo;
         this.datasetInstanceRepo = datasetInstanceRepo;
+        this.facadeFactory = facadeFactory;
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +66,7 @@ public class WorkflowRunService {
                 .map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional
     public Map<String, Object> submit(Map<String, Object> req) {
         Long defId = ((Number) req.get("workflowDefinitionId")).longValue();
         Long engineId = ((Number) req.get("engineId")).longValue();
@@ -86,11 +93,37 @@ public class WorkflowRunService {
         log.info("Submitted workflow run id={} definition={} engine={}",
                 entity.getId(), def.getWorkflowKey(), engine.getEngineName());
 
-        // TODO: trigger Airflow/EMR via REST API, set externalRunId
+        // Trigger async execution via the engine facade
+        executeAsync(entity.getId(), engine.getEngineType(), engine.getBaseUrl(),
+                def.getWorkflowKey(), req);
 
         return toDto(entity);
     }
 
+    @Async
+    public void executeAsync(Long runId, String engineType, String engineBaseUrl,
+                             String workflowRef, Map<String, Object> parameters) {
+        try {
+            WfEngineFacade facade = facadeFactory.getFacade(engineType);
+
+            // Task 1: Trigger the workflow on the engine
+            String externalRunId = facade.triggerRun(engineBaseUrl, workflowRef, runId, parameters);
+
+            // Task 2: Update status to RUNNING
+            updateStatus(runId, "RUNNING", externalRunId, null, null);
+            log.info("Workflow run id={} now RUNNING, externalRunId={}", runId, externalRunId);
+
+        } catch (UnsupportedOperationException e) {
+            // Engine not yet implemented — leave as SUBMITTED
+            log.warn("Engine facade not implemented: {}. Run id={} stays SUBMITTED.", engineType, runId);
+        } catch (Exception e) {
+            // Engine trigger failed
+            updateStatus(runId, "FAILED", null, null, e.getMessage());
+            log.error("Workflow run id={} FAILED: {}", runId, e.getMessage());
+        }
+    }
+
+    @Transactional
     public Map<String, Object> updateStatus(Long id, String status, String externalRunId,
                                              String resultPath, String errorMessage) {
         WorkflowRunEntity entity = repo.findById(id)
