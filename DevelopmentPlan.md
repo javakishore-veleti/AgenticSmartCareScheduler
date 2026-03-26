@@ -224,6 +224,21 @@ DAGs live in `DataManagement/Airflow/dags/<workflow_name>/` (product code, versi
 
 Not required for paper, can be completed after submission:
 
+### Workflow Run Detail Page — Dynamic Output Renderer
+Each workflow definition declares an **output schema** that tells the UI how to render results:
+- **Output schema per workflow**: JSON schema defining what sections (accordions) to display
+- **Accordion-based layout**: each section has a title, data source path, and render type
+- **Render types**: key-value pairs, table (with optional pagination), chart (bar/line/pie), log viewer, JSON tree
+- **Dynamic rendering engine**: Angular component reads the schema + output data and builds the UI at runtime
+- **Pagination**: configurable per section (e.g., outreach events table paginated, summary stats not)
+- **Example**: Patient Outreach Orchestration output might have:
+  - Accordion 1: "Run Summary" — key-value (total patients, duration, success rate)
+  - Accordion 2: "Context State Distribution" — bar chart (REACHABLE_MOBILE/STATIONARY/UNREACHABLE counts)
+  - Accordion 3: "Channel Selection" — pie chart (IVR/SMS/Callback split)
+  - Accordion 4: "Patient-Level Results" — paginated table (patientId, C_p, channel, outcome)
+  - Accordion 5: "Execution Log" — log viewer (timestamped agent actions)
+
+### Other Backlog Items
 - Agent Java implementations (PCA, COA, RRA, PSA, ACA)
 - AWS CloudFormation templates
 - Deployment workflows (bootstrap-infra, deploy-agents, run-scenario, shutdown-infra)
