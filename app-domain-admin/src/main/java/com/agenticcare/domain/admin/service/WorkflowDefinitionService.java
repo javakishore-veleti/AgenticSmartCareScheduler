@@ -117,9 +117,10 @@ public class WorkflowDefinitionService {
 
         for (WorkflowDefinitionMasterEntity def : allDefs) {
             for (WorkflowEngineMasterEntity engine : allEngines) {
-                boolean exists = mappingRepo.findByWorkflowDefinitionId(def.getId()).stream()
-                        .anyMatch(m -> m.getEngine().getId().equals(engine.getId()));
-                if (!exists) {
+                if (mappingRepo.findByWorkflowDefinitionIdAndEngineId(def.getId(), engine.getId()).isPresent()) {
+                    continue;
+                }
+                {
                     WorkflowEngineMappingEntity mapping = new WorkflowEngineMappingEntity();
                     mapping.setWorkflowDefinition(def);
                     mapping.setEngine(engine);
