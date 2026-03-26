@@ -37,6 +37,9 @@ public class WorkflowDefinitionMasterEntity {
     @Column(name = "paper_section")
     private String paperSection;  // e.g. VI. Evaluation, VII. Results
 
+    @Column(name = "requires_dataset", nullable = false)
+    private Boolean requiresDataset = true;
+
     @Column(name = "parameters_schema", columnDefinition = "TEXT")
     private String parametersSchema;  // JSON schema for workflow parameters
 

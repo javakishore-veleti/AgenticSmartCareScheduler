@@ -11,7 +11,7 @@ import { HttpClient } from '@angular/common/http';
   template: `
     <div class="mb-3">
       <a routerLink="/workflow-definitions" class="text-decoration-none" style="color: #ea580c;">
-        <i class="bi bi-arrow-left me-1"></i>Back to Definitions
+        <i class="bi bi-arrow-left me-1"></i>Back to Workflow Catalog
       </a>
     </div>
 
@@ -31,37 +31,53 @@ import { HttpClient } from '@angular/common/http';
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Workflow</label>
+          <!-- Step 1: Pick workflow -->
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">1. Select Workflow</label>
             <select class="form-select" [(ngModel)]="submitReq.workflowDefinitionId" (change)="onDefChange()">
-              <option value="">Select workflow...</option>
+              <option value="">Choose a workflow...</option>
               <option *ngFor="let d of definitions" [value]="d.id">{{ d.displayName }}</option>
             </select>
           </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Engine</label>
-            <select class="form-select" [(ngModel)]="submitReq.engineId" [disabled]="compatibleEngines.length === 0">
-              <option value="">Select engine...</option>
+
+          <!-- Step 2: Pick engine (auto-populated from mappings) -->
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">2. Select Engine</label>
+            <select class="form-select" [(ngModel)]="submitReq.engineId">
+              <option value="">Choose an engine...</option>
               <option *ngFor="let e of compatibleEngines" [value]="e.engineId">{{ e.engineName }} ({{ e.engineType }})</option>
             </select>
             <small *ngIf="submitReq.workflowDefinitionId && compatibleEngines.length === 0" class="text-danger">
-              No engines mapped. Map engines in Definitions page first.
+              No engines configured. Run System Setup first.
             </small>
           </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Dataset Instance (optional)</label>
+
+          <!-- Step 3: Pick dataset (if required) -->
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              3. Select Dataset
+              <span *ngIf="selectedDef?.requiresDataset" class="text-danger">*</span>
+              <span *ngIf="!selectedDef?.requiresDataset" class="text-muted small">(optional)</span>
+            </label>
             <select class="form-select" [(ngModel)]="submitReq.datasetInstanceId">
-              <option value="">None</option>
+              <option value="">{{ selectedDef?.requiresDataset ? 'Select a dataset...' : 'None' }}</option>
               <option *ngFor="let di of datasetInstances" [value]="di.id">
                 #{{ di.id }} — {{ di.storageType }} ({{ di.status }})
               </option>
             </select>
+            <small *ngIf="selectedDef?.requiresDataset && datasetInstances.length === 0" class="text-danger">
+              No dataset instances. Ingest a dataset first.
+            </small>
           </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn w-100" style="background: #ea580c; color: white; border-radius: 8px;"
-                    (click)="submitRun()" [disabled]="submitting || !submitReq.workflowDefinitionId || !submitReq.engineId">
+
+          <div class="col-12">
+            <button class="btn" style="background: #ea580c; color: white; border-radius: 8px;"
+                    (click)="submitRun()" [disabled]="!canSubmit()">
               <i class="bi bi-rocket-takeoff me-1"></i>{{ submitting ? 'Submitting...' : 'Submit Run' }}
             </button>
+            <span *ngIf="selectedDef" class="ms-3 small text-muted">
+              <i class="bi bi-robot me-1"></i>{{ selectedDef.agentPipeline }}
+            </span>
           </div>
         </div>
       </div>
@@ -91,7 +107,6 @@ import { HttpClient } from '@angular/common/http';
             <th>Engine</th>
             <th>Dataset</th>
             <th>Status</th>
-            <th>External ID</th>
             <th>Submitted</th>
             <th>Completed</th>
           </tr>
@@ -103,9 +118,7 @@ import { HttpClient } from '@angular/common/http';
               <span class="fw-semibold">{{ r.workflowDisplayName }}</span>
               <br><code class="small text-muted">{{ r.workflowKey }}</code>
             </td>
-            <td><span class="badge" style="background: #f0fdf4; color: #059669;">{{ r.engineName }}</span>
-              <small class="text-muted ms-1">{{ r.engineType }}</small>
-            </td>
+            <td><span class="badge" style="background: #f0fdf4; color: #059669;">{{ r.engineName }}</span></td>
             <td>{{ r.datasetInstanceId ? '#' + r.datasetInstanceId : '—' }}</td>
             <td>
               <span class="badge"
@@ -114,7 +127,6 @@ import { HttpClient } from '@angular/common/http';
                 {{ r.runStatus }}
               </span>
             </td>
-            <td class="small text-muted">{{ r.externalRunId || '—' }}</td>
             <td class="small">{{ r.submittedAt | date:'short' }}</td>
             <td class="small">{{ r.completedAt ? (r.completedAt | date:'short') : '—' }}</td>
           </tr>
@@ -128,6 +140,7 @@ export class WorkflowRunsComponent implements OnInit {
   definitions: any[] = [];
   datasetInstances: any[] = [];
   compatibleEngines: any[] = [];
+  selectedDef: any = null;
   loading = true;
   submitting = false;
   filterDefId: string = '';
@@ -158,10 +171,18 @@ export class WorkflowRunsComponent implements OnInit {
   }
 
   onDefChange() {
-    const def = this.definitions.find(d => d.id === Number(this.submitReq.workflowDefinitionId));
-    this.compatibleEngines = def?.engines || [];
-    this.submitReq.engineId = '';
+    this.selectedDef = this.definitions.find(d => d.id === Number(this.submitReq.workflowDefinitionId)) || null;
+    this.compatibleEngines = this.selectedDef?.engines || [];
+    this.submitReq.engineId = this.compatibleEngines.length === 1 ? String(this.compatibleEngines[0].engineId) : '';
+    this.submitReq.datasetInstanceId = '';
     this.cdr.detectChanges();
+  }
+
+  canSubmit(): boolean {
+    if (this.submitting) return false;
+    if (!this.submitReq.workflowDefinitionId || !this.submitReq.engineId) return false;
+    if (this.selectedDef?.requiresDataset && !this.submitReq.datasetInstanceId) return false;
+    return true;
   }
 
   loadDatasetInstances() {

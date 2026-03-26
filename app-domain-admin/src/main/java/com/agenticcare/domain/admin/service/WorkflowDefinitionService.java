@@ -86,13 +86,20 @@ public class WorkflowDefinitionService {
                 "ACA (Audit & Compliance Agent)",
                 "Bedrock Agents, OpenSearch, S3, CloudWatch",
                 "Spring AI ChatClient, Bedrock Claude, OpenSearch vector search",
-                "VII. Discussion");
+                "VII. Discussion",
+                false);  // does not require a dataset — audits existing outreach logs
 
         log.info("Seeded default workflow definitions");
     }
 
     private void seedOne(String key, String displayName, String description,
                          String agentPipeline, String awsServices, String techStack, String paperSection) {
+        seedOne(key, displayName, description, agentPipeline, awsServices, techStack, paperSection, true);
+    }
+
+    private void seedOne(String key, String displayName, String description,
+                         String agentPipeline, String awsServices, String techStack, String paperSection,
+                         boolean requiresDataset) {
         if (repo.findByWorkflowKey(key).isPresent()) {
             log.info("Workflow definition already exists: {}", key);
             return;
@@ -105,6 +112,7 @@ public class WorkflowDefinitionService {
         entity.setAwsServices(awsServices);
         entity.setTechStack(techStack);
         entity.setPaperSection(paperSection);
+        entity.setRequiresDataset(requiresDataset);
         entity.setStatus("ACTIVE");
         repo.save(entity);
         log.info("Seeded workflow definition: {}", key);
@@ -202,6 +210,7 @@ public class WorkflowDefinitionService {
         m.put("awsServices", e.getAwsServices());
         m.put("techStack", e.getTechStack());
         m.put("paperSection", e.getPaperSection());
+        m.put("requiresDataset", e.getRequiresDataset());
         m.put("parametersSchema", e.getParametersSchema());
         m.put("status", e.getStatus());
         m.put("createdAt", e.getCreatedAt());
