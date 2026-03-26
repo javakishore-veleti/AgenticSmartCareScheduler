@@ -63,6 +63,9 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
               <div class="list-group-item border-0 rounded-3 px-3 py-2" style="background:transparent;">
                 <i class="bi bi-gear me-2" style="color:#4f46e5;"></i><span class="fw-semibold" style="color:#333;">Administration</span>
               </div>
+              <a routerLink="/system-setup" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-0 ps-5 py-1" style="background:transparent; font-size: 0.85em;">
+                <i class="bi bi-database-gear me-2" style="color:#d97706;"></i>System Setup
+              </a>
               <a routerLink="/secrets" routerLinkActive="active" class="list-group-item list-group-item-action border-0 rounded-3 mb-0 ps-5 py-1" style="background:transparent; font-size: 0.85em;">
                 <i class="bi bi-shield-lock me-2" style="color:#e11d48;"></i>Secrets
               </a>

@@ -48,6 +48,20 @@ public class WorkflowEngineService {
         return toDto(repo.save(entity));
     }
 
+    public void seedDefaults() {
+        if (repo.findByEngineName("local-airflow").isEmpty()) {
+            WorkflowEngineMasterEntity engine = new WorkflowEngineMasterEntity();
+            engine.setEngineName("local-airflow");
+            engine.setEngineType("AIRFLOW");
+            engine.setBaseUrl("http://localhost:8082");
+            engine.setAuthType("BASIC");
+            engine.setDescription("Local Apache Airflow instance (Docker Compose on port 8082). Login: admin/admin.");
+            engine.setStatus("ACTIVE");
+            repo.save(engine);
+            log.info("Seeded default workflow engine: local-airflow");
+        }
+    }
+
     public void delete(Long id) {
         log.info("Deleting workflow engine id={}", id);
         repo.deleteById(id);

@@ -24,6 +24,14 @@ public class AdminWorkflowEngineController {
         this.service = service;
     }
 
+    @PostMapping("/seed-defaults")
+    @Operation(summary = "Seed default workflow engines")
+    public ResponseEntity<Map<String, String>> seedDefaults() {
+        log.info(">>> POST /workflow-engines/seed-defaults called");
+        service.seedDefaults();
+        return ResponseEntity.ok(Map.of("status", "seeded"));
+    }
+
     @GetMapping
     @Operation(summary = "List all workflow engines")
     public ResponseEntity<List<Map<String, Object>>> getAll() {

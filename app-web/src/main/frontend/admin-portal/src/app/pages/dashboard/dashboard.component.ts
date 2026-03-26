@@ -1,9 +1,41 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
+  imports: [CommonModule, RouterLink],
   template: `
+    <!-- Setup Alert -->
+    <div *ngIf="setupStatus && !setupStatus.allSeeded" class="alert mb-4" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #d97706; border-radius: 12px;">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h5 class="fw-bold mb-1" style="color: #92400e;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Foundational Data Setup Required
+          </h5>
+          <p class="mb-2 small" style="color: #78350f;">
+            {{ setupStatus.pendingSetup.length }} setup step(s) pending. Seed foundational data to enable all features.
+          </p>
+          <div class="d-flex flex-wrap gap-2">
+            <span *ngFor="let p of setupStatus.pendingSetup" class="badge" style="background: #fef9c3; color: #854d0e; border: 1px solid #d97706;">
+              <i class="bi bi-circle me-1"></i>{{ p.label }}
+            </span>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <a routerLink="/system-setup" class="btn btn-sm" style="background: #d97706; color: white; border-radius: 8px;">
+            <i class="bi bi-gear me-1"></i>View Details
+          </a>
+          <button class="btn btn-sm" style="background: #92400e; color: white; border-radius: 8px;"
+                  (click)="seedAll()" [disabled]="seeding">
+            <i class="bi bi-cloud-download me-1"></i>{{ seeding ? 'Seeding...' : 'Seed All Now' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <h2 class="fw-bold mb-4" style="color: #0d9488;"><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</h2>
     <div class="row g-4 mb-4">
       <div class="col-md-2">
@@ -70,4 +102,27 @@ import { Component } from '@angular/core';
     </div>
   `
 })
-export class DashboardComponent {}
+export class DashboardComponent implements OnInit {
+  setupStatus: any = null;
+  seeding = false;
+  private baseUrl = window.location.origin + '/smart-care/api/admin/v1/system-setup';
+
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit() { this.checkSetup(); }
+
+  checkSetup() {
+    this.http.get<any>(`${this.baseUrl}/status`).subscribe({
+      next: (data) => { this.setupStatus = data; this.cdr.detectChanges(); },
+      error: () => { this.setupStatus = null; this.cdr.detectChanges(); }
+    });
+  }
+
+  seedAll() {
+    this.seeding = true;
+    this.http.post(`${this.baseUrl}/seed-all`, {}).subscribe({
+      next: () => { this.seeding = false; this.checkSetup(); },
+      error: () => { this.seeding = false; this.cdr.detectChanges(); }
+    });
+  }
+}

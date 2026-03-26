@@ -16,6 +16,7 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { WorkflowEnginesComponent } from './pages/workflow-engines/workflow-engines.component';
 import { WorkflowDefinitionsComponent } from './pages/workflow-definitions/workflow-definitions.component';
 import { WorkflowRunsComponent } from './pages/workflow-runs/workflow-runs.component';
+import { SystemSetupComponent } from './pages/system-setup/system-setup.component';
 
 export const routes: Routes = [
   { path: '', component: DashboardComponent },
@@ -33,6 +34,7 @@ export const routes: Routes = [
   { path: 'workflow-engines', component: WorkflowEnginesComponent },
   { path: 'workflow-definitions', component: WorkflowDefinitionsComponent },
   { path: 'workflow-runs', component: WorkflowRunsComponent },
+  { path: 'system-setup', component: SystemSetupComponent },
   { path: 'audit', component: AuditComponent },
   { path: 'settings', component: SettingsComponent },
   { path: '**', redirectTo: '' }
