@@ -40,12 +40,30 @@ public class WorkflowDefinitionService {
     }
 
     public void seedDefaults() {
-        seedOne("cp_simulation", "Context State Simulation",
-                "Assigns context states (C_p) to patient records based on appointment time, SMS receipt, and risk score. Produces channel distribution stats.");
-        seedOne("model_retrain", "XGBoost Model Retrain",
-                "Retrains the PCA risk model (XGBoost) on the Medical Appointment No-Show dataset. Outputs F1, AUC, confusion matrix, and saved model.");
-        seedOne("data_quality_check", "Data Quality Check",
-                "Validates dataset integrity: null checks, range validation, duplicate detection, schema conformance. Produces quality report.");
+        seedOne("noshow_risk_scoring", "No-Show Risk Scoring",
+                "Runs XGBoost model on patient appointment dataset to predict no-show risk probability (R_p) for each patient. "
+                + "Outputs risk scores, F1, AUC, precision, recall, and confusion matrix. Maps to PCA (Patient Context Agent) pipeline stage.");
+
+        seedOne("patient_context_classification", "Patient Context Classification",
+                "Classifies each patient into a context state (C_p): REACHABLE_MOBILE (commuting hours), "
+                + "REACHABLE_STATIONARY (work hours), or UNREACHABLE (no SMS + high risk). "
+                + "Uses appointment time, SMS receipt history, and R_p score. Core input for channel selection.");
+
+        seedOne("channel_distribution_analysis", "Channel Distribution Analysis",
+                "Computes outreach channel distribution (Voice IVR, SMS Deep-Link, Callback) across C_p states. "
+                + "Produces the channel selection breakdown that demonstrates the COA (Communication Orchestration Agent) decision logic. "
+                + "Generates Fig. 5 for the IEEE paper.");
+
+        seedOne("outreach_effectiveness_eval", "Outreach Effectiveness Evaluation",
+                "Compares the proposed multi-agent, context-aware outreach strategy against an SMS-only baseline. "
+                + "Measures reachability improvement, channel appropriateness, and estimated confirmation rate uplift. "
+                + "Provides evidence for the paper's core claim of improved patient engagement.");
+
+        seedOne("slot_reallocation_simulation", "Appointment Slot Reallocation",
+                "Identifies high-risk appointment slots (R_p > 0.65) and simulates the RRA (Resource Reallocation Agent) "
+                + "strategy: waitlist promotion, provider schedule optimization, and double-booking mitigation. "
+                + "Outputs slot utilization improvement metrics.");
+
         log.info("Seeded default workflow definitions");
     }
 
