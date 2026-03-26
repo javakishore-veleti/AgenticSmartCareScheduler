@@ -25,6 +25,11 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+smartcare:
+  messaging:
+    provider: http-broker  # default: use message broker Spring Boot; overridden by local-kafka profile
+    broker-url: http://localhost:8081/smart-care/api/broker/v1/messages
+
 feature:
   toggles:
     workflow:

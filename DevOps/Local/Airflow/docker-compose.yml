@@ -6,6 +6,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
     _AIRFLOW_WWW_USER_CREATE: 'true'
@@ -46,7 +47,9 @@ services:
       - |
         airflow db migrate
         airflow users create --role Admin --username admin --password admin --email admin@example.com --firstname Admin --lastname User || true
-        echo "Airflow initialized."
+        airflow connections add 'smartcare_broker' --conn-type 'http' --conn-host 'host.docker.internal' --conn-port '8081' --conn-schema 'http' --conn-description 'SmartCare Message Broker API' || true
+        airflow connections add 'smartcare_api' --conn-type 'http' --conn-host 'host.docker.internal' --conn-port '8080' --conn-schema 'http' --conn-description 'SmartCare Spring Boot API' || true
+        echo "Airflow initialized with SmartCare connections."
     restart: "no"
 
   airflow-webserver:
