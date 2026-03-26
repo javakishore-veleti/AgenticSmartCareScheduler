@@ -115,6 +115,29 @@ import { HttpClient } from '@angular/common/http';
           </div>
         </div>
       </div>
+
+      <!-- Workflow-Engine Mappings -->
+      <div class="col-12">
+        <div class="card" [style.border-left]="'4px solid ' + (status.mappingsSeeded ? '#059669' : '#d97706')">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi fs-3 me-3" [class]="status.mappingsSeeded ? 'bi-check-circle-fill' : 'bi-circle'"
+                 [style.color]="status.mappingsSeeded ? '#059669' : '#d97706'"></i>
+              <div>
+                <h5 class="fw-bold mb-1">Workflow-Engine Mappings</h5>
+                <p class="text-muted small mb-0">Map all workflows to all compatible engines so they appear in the engine dropdown when creating a run</p>
+              </div>
+            </div>
+            <div>
+              <span *ngIf="status.mappingsSeeded" class="badge" style="background: #d1fae5; color: #059669;">Seeded</span>
+              <button *ngIf="!status.mappingsSeeded" class="btn btn-sm" style="background: #d97706; color: white; border-radius: 8px;"
+                      (click)="seed('mappings')" [disabled]="seedingKey === 'mappings'">
+                <i class="bi bi-cloud-download me-1"></i>{{ seedingKey === 'mappings' ? 'Seeding...' : 'Seed Now' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Setup log -->

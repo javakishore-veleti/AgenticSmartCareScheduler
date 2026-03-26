@@ -20,6 +20,7 @@ public class SystemSetupService {
     public static final String DATASETS_SEEDED = "datasets_seeded";
     public static final String WORKFLOWS_SEEDED = "workflows_seeded";
     public static final String ENGINES_SEEDED = "engines_seeded";
+    public static final String MAPPINGS_SEEDED = "mappings_seeded";
 
     public SystemSetupService(SystemSettingsLogRepository logRepo) {
         this.logRepo = logRepo;
@@ -31,11 +32,13 @@ public class SystemSetupService {
         boolean datasetsSeeded = isSeeded(DATASETS_SEEDED);
         boolean workflowsSeeded = isSeeded(WORKFLOWS_SEEDED);
         boolean enginesSeeded = isSeeded(ENGINES_SEEDED);
+        boolean mappingsSeeded = isSeeded(MAPPINGS_SEEDED);
 
         status.put("datasetsSeeded", datasetsSeeded);
         status.put("workflowsSeeded", workflowsSeeded);
         status.put("enginesSeeded", enginesSeeded);
-        status.put("allSeeded", datasetsSeeded && workflowsSeeded && enginesSeeded);
+        status.put("mappingsSeeded", mappingsSeeded);
+        status.put("allSeeded", datasetsSeeded && workflowsSeeded && enginesSeeded && mappingsSeeded);
 
         List<Map<String, String>> pending = new ArrayList<>();
         if (!datasetsSeeded) pending.add(Map.of(
@@ -53,6 +56,11 @@ public class SystemSetupService {
                 "label", "Workflow Engines",
                 "description", "Local Apache Airflow engine registration",
                 "action", "seed-engines"));
+        if (!mappingsSeeded) pending.add(Map.of(
+                "key", MAPPINGS_SEEDED,
+                "label", "Workflow-Engine Mappings",
+                "description", "Map all workflows to all compatible engines (requires workflows + engines seeded first)",
+                "action", "seed-mappings"));
         status.put("pendingSetup", pending);
 
         return status;

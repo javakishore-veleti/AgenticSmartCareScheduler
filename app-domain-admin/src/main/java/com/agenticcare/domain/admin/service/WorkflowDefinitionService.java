@@ -110,6 +110,29 @@ public class WorkflowDefinitionService {
         log.info("Seeded workflow definition: {}", key);
     }
 
+    @Transactional
+    public void seedDefaultMappings() {
+        List<WorkflowDefinitionMasterEntity> allDefs = repo.findAll();
+        List<WorkflowEngineMasterEntity> allEngines = engineRepo.findAll();
+
+        for (WorkflowDefinitionMasterEntity def : allDefs) {
+            for (WorkflowEngineMasterEntity engine : allEngines) {
+                boolean exists = mappingRepo.findByWorkflowDefinitionId(def.getId()).stream()
+                        .anyMatch(m -> m.getEngine().getId().equals(engine.getId()));
+                if (!exists) {
+                    WorkflowEngineMappingEntity mapping = new WorkflowEngineMappingEntity();
+                    mapping.setWorkflowDefinition(def);
+                    mapping.setEngine(engine);
+                    mapping.setEngineWorkflowRef(def.getWorkflowKey());  // DAG id = workflow key
+                    mapping.setStatus("ACTIVE");
+                    mappingRepo.save(mapping);
+                    log.info("Mapped workflow={} to engine={} ref={}", def.getWorkflowKey(), engine.getEngineName(), def.getWorkflowKey());
+                }
+            }
+        }
+        log.info("Seeded default workflow-engine mappings: {} definitions x {} engines", allDefs.size(), allEngines.size());
+    }
+
     public Map<String, Object> create(Map<String, Object> req) {
         WorkflowDefinitionMasterEntity entity = new WorkflowDefinitionMasterEntity();
         entity.setWorkflowKey((String) req.get("workflowKey"));

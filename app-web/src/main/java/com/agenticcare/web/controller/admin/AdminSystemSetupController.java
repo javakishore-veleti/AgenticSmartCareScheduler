@@ -67,6 +67,10 @@ public class AdminSystemSetupController {
             engineService.seedDefaults();
             setupService.recordSeed(SystemSetupService.ENGINES_SEEDED, "local-airflow engine");
         }
+        if (!setupService.isSeeded(SystemSetupService.MAPPINGS_SEEDED)) {
+            defService.seedDefaultMappings();
+            setupService.recordSeed(SystemSetupService.MAPPINGS_SEEDED, "All workflows mapped to all engines");
+        }
 
         return ResponseEntity.ok(Map.of("status", "all_seeded"));
     }
@@ -88,6 +92,10 @@ public class AdminSystemSetupController {
             case "engines" -> {
                 engineService.seedDefaults();
                 setupService.recordSeed(SystemSetupService.ENGINES_SEEDED, "local-airflow engine");
+            }
+            case "mappings" -> {
+                defService.seedDefaultMappings();
+                setupService.recordSeed(SystemSetupService.MAPPINGS_SEEDED, "All workflows mapped to all engines");
             }
             default -> {
                 return ResponseEntity.badRequest().body(Map.of("error", "Unknown key: " + key));
