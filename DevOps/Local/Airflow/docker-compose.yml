@@ -18,8 +18,7 @@ x-airflow-common: &airflow-common
     - ../../../DataManagement/Airflow/dags:/opt/airflow/dags
     - ../../../DataManagement/Airflow/plugins:/opt/airflow/plugins
     - airflow-logs:/opt/airflow/logs
-    - ~/runtime_data:/home/airflow/runtime_data
-    - workflow-output:/home/airflow/runtime_data/workflow_output
+    - ${HOME}/runtime_data:/home/airflow/runtime_data
   depends_on:
     airflow-postgres:
       condition: service_healthy
@@ -84,4 +83,3 @@ services:
 volumes:
   airflow-pg-data:
   airflow-logs:
-  workflow-output:
