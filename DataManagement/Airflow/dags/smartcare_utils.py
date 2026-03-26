@@ -2,7 +2,9 @@
 Shared utilities for SmartCare Airflow DAGs.
 Reads connection details from Airflow Connections (configured in Admin > Connections).
 """
+import os
 import json
+import glob
 import requests
 from airflow.hooks.base import BaseHook
 
@@ -38,6 +40,62 @@ def notify_broker(run_id, dag_id, status):
         }, timeout=5)
     except Exception as e:
         print(f"Broker notification failed: {e}")
+
+
+def resolve_dataset_path(dataset_path):
+    """
+    Resolve dataset path from Spring Boot's storageLocationHint to a path
+    accessible inside the Airflow Docker container.
+
+    Spring Boot stores: ~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded/<uuid>
+    Docker mounts:      ${HOME}/runtime_data → /home/airflow/runtime_data
+
+    Returns the path to the first CSV file found in the resolved directory.
+    """
+    if not dataset_path:
+        return None
+
+    # Translate host path to container path
+    # ~/runtime_data/... → /home/airflow/runtime_data/...
+    resolved = dataset_path
+    if resolved.startswith("~/"):
+        resolved = "/home/airflow/" + resolved[2:]
+    elif "/runtime_data/" in resolved:
+        # Handle absolute host paths like /Users/user/runtime_data/...
+        idx = resolved.index("/runtime_data/")
+        resolved = "/home/airflow" + resolved[idx:]
+
+    # Find CSV file in the directory
+    if os.path.isdir(resolved):
+        csvs = glob.glob(os.path.join(resolved, "*.csv"))
+        if csvs:
+            return csvs[0]
+        # Check subdirectories
+        csvs = glob.glob(os.path.join(resolved, "**/*.csv"), recursive=True)
+        if csvs:
+            return csvs[0]
+        print(f"WARNING: No CSV found in {resolved}")
+        return resolved
+
+    if os.path.isfile(resolved):
+        return resolved
+
+    print(f"WARNING: Path not found: {resolved} (original: {dataset_path})")
+    return resolved
+
+
+def resolve_output_dir(output_dir, run_id):
+    """Resolve output directory path for container access."""
+    if not output_dir:
+        return f"/home/airflow/runtime_data/workflow_output/run_{run_id}"
+    resolved = output_dir
+    if "~/runtime_data" in resolved:
+        resolved = resolved.replace("~/runtime_data", "/home/airflow/runtime_data")
+    elif "/runtime_data/" in resolved and not resolved.startswith("/home/airflow"):
+        idx = resolved.index("/runtime_data/")
+        resolved = "/home/airflow" + resolved[idx:]
+    os.makedirs(resolved, exist_ok=True)
+    return resolved
 
 
 def update_run_status(run_id, status, error_message=None):

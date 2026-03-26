@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from smartcare_utils import notify_broker, update_run_status
+from smartcare_utils import notify_broker, update_run_status, resolve_dataset_path, resolve_output_dir
 
 DAG_ID = "patient_outreach_orchestration"
 default_args = {"owner": "smartcare", "retries": 1, "retry_delay": timedelta(minutes=2)}
@@ -28,21 +28,15 @@ def assess_patient_context(**kwargs):
     conf = kwargs.get("dag_run").conf or {}
     run_id = conf.get("runId")
     dataset_path = conf.get("datasetPath", "")
-    output_dir = conf.get("outputDir", f"/tmp/smartcare_run_{run_id}")
+    output_dir = resolve_output_dir(conf.get("outputDir"), run_id)
 
     notify_broker(run_id, DAG_ID, "RUNNING")
     update_run_status(run_id, "RUNNING")
 
-    # Find CSV
-    csv_file = None
-    if dataset_path and os.path.isdir(dataset_path):
-        for f in os.listdir(dataset_path):
-            if f.endswith(".csv"):
-                csv_file = os.path.join(dataset_path, f)
-                break
-    if not csv_file:
-        csv_file = os.path.expanduser(
-            "~/runtime_data/DataSets/SmartCare-Admin/Datasets-Loaded/kaggle-noshow/KaggleV2-May-2016.csv")
+    # Resolve dataset path (translates host path to container path, finds CSV)
+    csv_file = resolve_dataset_path(dataset_path)
+    if not csv_file or not os.path.isfile(csv_file):
+        raise FileNotFoundError(f"Dataset not found. datasetPath={dataset_path}, resolved={csv_file}")
 
     print(f"PCA: Loading {csv_file}")
     df = pd.read_csv(csv_file)
@@ -91,7 +85,7 @@ def select_outreach_channel(**kwargs):
 
     conf = kwargs.get("dag_run").conf or {}
     run_id = conf.get("runId")
-    output_dir = conf.get("outputDir", f"/tmp/smartcare_run_{run_id}")
+    output_dir = resolve_output_dir(conf.get("outputDir"), run_id)
 
     df = pd.read_parquet(os.path.join(output_dir, "pca_output.parquet"))
     df['Channel'] = df['C_p'].map({
@@ -116,7 +110,7 @@ def generate_report(**kwargs):
 
     conf = kwargs.get("dag_run").conf or {}
     run_id = conf.get("runId")
-    output_dir = conf.get("outputDir", f"/tmp/smartcare_run_{run_id}")
+    output_dir = resolve_output_dir(conf.get("outputDir"), run_id)
 
     df = pd.read_parquet(os.path.join(output_dir, "coa_output.parquet"))
     n = len(df)
