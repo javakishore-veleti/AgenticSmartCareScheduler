@@ -430,8 +430,34 @@ Java Lambda cold starts are 5-10 seconds — too slow for per-patient real-time 
 | Airflow DAGs (batch dispatcher) | Python | Docker (local) / MWAA (AWS) |
 | Bedrock + Connect + SNS calls | Python (boto3) | Inside Lambda |
 
-Lambda code lives in: `infra/lambda/pca/`, `infra/lambda/coa/`, `infra/lambda/psa/`, `infra/lambda/rra/`, `infra/lambda/aca/`
-Each folder has: `handler.py`, `requirements.txt`, and shares common utils.
+### Agent Code Structure — Platform-Agnostic Core + Cloud Wrappers
+
+```
+DataManagement/SmartCareAgents/
+  PatientContext/core/pca_agent.py              ← platform-agnostic PCA logic
+  CommunicationOrchestration/core/coa_agent.py  ← platform-agnostic COA logic
+  ProviderScheduling/core/psa_agent.py
+  ResourceReallocation/core/rra_agent.py
+  AuditCompliance/core/aca_agent.py
+  Shared/core/signal_checker.py                 ← guard logic, shared models
+  Shared/core/models.py
+
+  AWS/PatientContext/wrapper/handler.py          ← thin AWS Lambda wrapper → calls core
+  AWS/CommunicationOrchestration/wrapper/handler.py
+  AWS/ProviderScheduling/wrapper/handler.py
+  AWS/ResourceReallocation/wrapper/handler.py
+  AWS/AuditCompliance/wrapper/handler.py
+
+  Azure/PatientContext/wrapper/handler.py        ← future
+  GCP/PatientContext/wrapper/handler.py          ← future
+```
+
+**Deployment packaging:** Copy `<Agent>/core/` + `<Cloud>/<Agent>/wrapper/` → deploy.
+- AWS Lambda: core + AWS wrapper → zip → deploy
+- Azure Function: core + Azure wrapper → deploy
+- GCP Cloud Function: core + GCP wrapper → deploy
+
+Core files are self-contained (1 file per agent + shared.py). Wrapper is ~20 lines: parse cloud event → call core → format cloud response.
 
 ---
 
@@ -471,17 +497,22 @@ Each folder has: `handler.py`, `requirements.txt`, and shares common utils.
 | B9 | Connect template | `infra/cfn-connect.yaml` | PENDING | Instance + 3 contact flows (IVR, SMS, callback) |
 | B10 | HealthLake template | `infra/cfn-healthlake.yaml` | PENDING | FHIR R4 datastore |
 
-### Phase C: Lambda Function Code (Python)
+### Phase C: Agent Code — Platform-Agnostic Core + AWS Wrappers
 
 | # | Task | Path | Status | Notes |
 |---|---|---|---|---|
-| C1 | Shared Lambda utils | `infra/lambda/shared/` | PENDING | boto3 helpers for Bedrock, Connect, SNS, SQS, OpenSearch |
-| C2 | PCA Lambda handler | `infra/lambda/pca/handler.py` | PENDING | Calls Bedrock Claude for C_p classification, XGBoost for R_p |
-| C3 | COA Lambda handler | `infra/lambda/coa/handler.py` | PENDING | Calls Connect (IVR/SMS/callback), publishes result to EventBridge |
-| C4 | PSA Lambda handler | `infra/lambda/psa/handler.py` | PENDING | Queries OpenSearch for unconfirmed slots, escalates to RRA |
-| C5 | RRA Lambda handler | `infra/lambda/rra/handler.py` | PENDING | Queries waitlist from HealthLake, triggers COA for top candidate |
-| C6 | ACA Lambda handler | `infra/lambda/aca/handler.py` | PENDING | Writes immutable audit to OpenSearch with ILM |
-| C7 | Lambda requirements.txt | `infra/lambda/*/requirements.txt` | PENDING | boto3, xgboost (PCA only), requests |
+| C1 | Shared models + signal checker | `SmartCareAgents/Shared/core/` | PENDING | Input/output models, signal_checker (guard logic) |
+| C2 | PCA core agent | `SmartCareAgents/PatientContext/core/pca_agent.py` | PENDING | C_p classification, R_p risk, reasoning chain — NO cloud imports |
+| C3 | COA core agent | `SmartCareAgents/CommunicationOrchestration/core/coa_agent.py` | PENDING | Channel selection, action decision — NO cloud imports |
+| C4 | PSA core agent | `SmartCareAgents/ProviderScheduling/core/psa_agent.py` | PENDING | Unconfirmed slot detection, escalation logic |
+| C5 | RRA core agent | `SmartCareAgents/ResourceReallocation/core/rra_agent.py` | PENDING | Waitlist ranking, slot reallocation logic |
+| C6 | ACA core agent | `SmartCareAgents/AuditCompliance/core/aca_agent.py` | PENDING | Audit record builder, compliance checks |
+| C7 | AWS PCA wrapper | `SmartCareAgents/AWS/PatientContext/wrapper/handler.py` | PENDING | Lambda handler: parse event → call pca_agent → Bedrock boto3 |
+| C8 | AWS COA wrapper | `SmartCareAgents/AWS/CommunicationOrchestration/wrapper/handler.py` | PENDING | Lambda handler: call coa_agent → Connect/SNS boto3 |
+| C9 | AWS PSA wrapper | `SmartCareAgents/AWS/ProviderScheduling/wrapper/handler.py` | PENDING | Lambda handler: call psa_agent → OpenSearch queries |
+| C10 | AWS RRA wrapper | `SmartCareAgents/AWS/ResourceReallocation/wrapper/handler.py` | PENDING | Lambda handler: call rra_agent → HealthLake queries |
+| C11 | AWS ACA wrapper | `SmartCareAgents/AWS/AuditCompliance/wrapper/handler.py` | PENDING | Lambda handler: call aca_agent → OpenSearch ILM write |
+| C12 | requirements.txt per agent | `SmartCareAgents/AWS/*/wrapper/requirements.txt` | PENDING | boto3 only in wrappers; core has zero cloud deps |
 
 ### Phase D: Spring Boot AWS Integration
 
