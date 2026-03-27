@@ -14,7 +14,6 @@ import { HttpClient } from '@angular/common/http';
       </a>
     </div>
 
-    <!-- Loading -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border" style="color: #ea580c;"></div>
     </div>
@@ -26,14 +25,19 @@ import { HttpClient } from '@angular/common/http';
           <h2 class="fw-bold" style="color: #ea580c;">
             <i class="bi bi-play-circle me-2"></i>Run #{{ run.id }} &mdash; {{ run.workflowDisplayName }}
           </h2>
+          <code class="small text-muted">{{ run.workflowKey }}</code>
           <div class="d-flex align-items-center gap-2 mt-2">
-            <span class="badge"
+            <span class="badge fs-6"
                   [style.background]="statusColor(run.runStatus).bg"
                   [style.color]="statusColor(run.runStatus).fg">
               {{ run.runStatus }}
             </span>
-            <span class="badge" style="background: #f0fdf4; color: #059669;">
-              {{ run.engineName }} ({{ run.engineType }})
+            <a [href]="'http://localhost:8082'" target="_blank" class="badge text-decoration-none fs-6"
+               style="background: #f0fdf4; color: #059669; cursor: pointer;">
+              <i class="bi bi-box-arrow-up-right me-1"></i>{{ run.engineName }} ({{ run.engineType }})
+            </a>
+            <span *ngIf="run.externalRunId" class="badge" style="background: #e0e7ff; color: #4f46e5;">
+              External: {{ run.externalRunId }}
             </span>
           </div>
         </div>
@@ -46,134 +50,186 @@ import { HttpClient } from '@angular/common/http';
       <div class="card mb-4" style="border-left: 4px solid #ea580c;">
         <div class="card-body">
           <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-3">
               <small class="text-muted d-block">Submitted</small>
               <span class="fw-semibold">{{ run.submittedAt | date:'medium' }}</span>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <small class="text-muted d-block">Started</small>
               <span class="fw-semibold">{{ run.startedAt ? (run.startedAt | date:'medium') : '—' }}</span>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <small class="text-muted d-block">Completed</small>
               <span class="fw-semibold">{{ run.completedAt ? (run.completedAt | date:'medium') : '—' }}</span>
+            </div>
+            <div class="col-md-3">
+              <small class="text-muted d-block">Dataset Instance</small>
+              <span class="fw-semibold">{{ run.datasetInstanceId ? '#' + run.datasetInstanceId : 'None' }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Error box for FAILED -->
-      <div *ngIf="run.runStatus === 'FAILED' && run.errorMessage" class="alert alert-danger mb-4">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <strong>Error:</strong> {{ run.errorMessage }}
+      <!-- Error for FAILED -->
+      <div *ngIf="run.runStatus === 'FAILED'" class="alert mb-4"
+           style="background: #fee2e2; border: 1px solid #dc2626; border-radius: 12px;">
+        <h5 class="fw-bold" style="color: #991b1b;">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Workflow Run Failed
+        </h5>
+        <pre *ngIf="run.errorMessage" class="mb-0 small" style="color: #991b1b; white-space: pre-wrap;">{{ run.errorMessage }}</pre>
+        <p *ngIf="!run.errorMessage" class="mb-0 text-muted">No error details available. Check Airflow logs.</p>
       </div>
 
-      <!-- Results section for COMPLETED -->
+      <!-- SUBMITTED / RUNNING -->
+      <div *ngIf="run.runStatus === 'SUBMITTED' || run.runStatus === 'RUNNING'" class="card mb-4">
+        <div class="card-body text-center py-5">
+          <div class="spinner-border mb-3" style="color: #ea580c;"></div>
+          <h5 class="fw-bold">Workflow is {{ run.runStatus === 'SUBMITTED' ? 'queued' : 'running' }}...</h5>
+          <p class="text-muted">Results will appear here when complete. Click Refresh to check.</p>
+        </div>
+      </div>
+
+      <!-- Results for COMPLETED -->
       <div *ngIf="run.runStatus === 'COMPLETED'">
         <div *ngIf="resultsLoading" class="text-center py-4">
           <div class="spinner-border spinner-border-sm" style="color: #ea580c;"></div>
-          <span class="ms-2 text-muted">Loading results...</span>
         </div>
 
         <div *ngIf="!resultsLoading && !results" class="card mb-4">
           <div class="card-body text-center py-4">
             <i class="bi bi-hourglass-split fs-3 text-muted"></i>
-            <p class="mt-2 text-muted">Results not yet available.</p>
+            <p class="mt-2 text-muted">Results file not found.</p>
           </div>
         </div>
 
         <div *ngIf="!resultsLoading && results">
-          <h4 class="fw-bold mb-3" style="color: #ea580c;">
-            <i class="bi bi-bar-chart-line me-2"></i>Results
-          </h4>
-
-          <!-- Summary Card -->
-          <div class="card mb-4">
-            <div class="card-header bg-white border-0 pt-3">
-              <h5 class="fw-bold"><i class="bi bi-clipboard-data me-2" style="color: #ea580c;"></i>Summary</h5>
-            </div>
-            <div class="card-body">
-              <div class="row text-center">
-                <div class="col-md-6">
-                  <div class="fs-2 fw-bold" style="color: #ea580c;">{{ results.summary?.totalRecords ?? '—' }}</div>
-                  <small class="text-muted">Total Records</small>
-                </div>
-                <div class="col-md-6">
-                  <div class="fs-2 fw-bold" style="color: #ea580c;">{{ formatPercent(results.summary?.noShowRate) }}</div>
-                  <small class="text-muted">No-Show Rate</small>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Context State Distribution -->
-          <div *ngIf="results.contextStateDistribution" class="mb-4">
-            <h5 class="fw-bold mb-3"><i class="bi bi-diagram-3 me-2" style="color: #ea580c;"></i>Context State Distribution</h5>
-            <div class="row g-3">
-              <div class="col-md-4" *ngFor="let cs of contextStates">
-                <div class="card h-100 text-center">
-                  <div class="card-body">
-                    <h6 class="fw-bold text-muted">{{ cs.label }}</h6>
-                    <div class="fs-3 fw-bold" style="color: #ea580c;">{{ cs.count }}</div>
-                    <div class="text-muted">{{ formatPercent(cs.percentage) }} of total</div>
-                    <div class="mt-2">
-                      <small class="text-muted">No-Show Rate: </small>
-                      <span class="fw-semibold">{{ formatPercent(cs.noShowRate) }}</span>
+          <!-- Accordion: Summary -->
+          <div class="accordion mb-3" id="accordionResults">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSum">
+                  <i class="bi bi-clipboard-data me-2" style="color: #ea580c;"></i>
+                  <strong>Summary</strong>
+                  <span class="badge ms-2" style="background: #ea580c22; color: #ea580c;">{{ results.total_records | number }} records</span>
+                </button>
+              </h2>
+              <div id="collapseSum" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="row text-center">
+                    <div class="col-md-4">
+                      <div class="fs-2 fw-bold" style="color: #4f46e5;">{{ results.total_records | number }}</div>
+                      <small class="text-muted">Total Records</small>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="fs-2 fw-bold" style="color: #ea580c;">{{ results.no_show_rate }}%</div>
+                      <small class="text-muted">No-Show Rate</small>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="fs-2 fw-bold" style="color: #059669;">+{{ results.baseline_comparison?.improvement_pp }}pp</div>
+                      <small class="text-muted">Reachability Improvement</small>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Channel Distribution -->
-          <div *ngIf="results.channelDistribution" class="mb-4">
-            <h5 class="fw-bold mb-3"><i class="bi bi-broadcast me-2" style="color: #ea580c;"></i>Channel Distribution</h5>
-            <div class="row g-3">
-              <div class="col-md-4" *ngFor="let ch of channels">
-                <div class="card h-100 text-center">
-                  <div class="card-body">
-                    <h6 class="fw-bold text-muted">{{ ch.label }}</h6>
-                    <div class="fs-3 fw-bold" style="color: #ea580c;">{{ ch.count }}</div>
-                    <div class="text-muted">{{ formatPercent(ch.percentage) }}</div>
+            <!-- Accordion: Context States -->
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCp">
+                  <i class="bi bi-diagram-3 me-2" style="color: #7c3aed;"></i>
+                  <strong>Patient Context States (C_p)</strong>
+                </button>
+              </h2>
+              <div id="collapseCp" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="row g-3">
+                    <div class="col-md-4" *ngFor="let cs of contextStates">
+                      <div class="card text-center" [style.border-top]="'3px solid ' + cs.color">
+                        <div class="card-body">
+                          <h6 class="fw-bold" [style.color]="cs.color">{{ cs.label }}</h6>
+                          <div class="fs-3 fw-bold">{{ cs.count | number }}</div>
+                          <div class="text-muted">{{ cs.percentage }}% of total</div>
+                          <div class="mt-2 small">
+                            <span class="text-muted">No-show rate: </span>
+                            <span class="fw-bold" [style.color]="cs.noShowRate > 40 ? '#dc2626' : '#059669'">{{ cs.noShowRate }}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Baseline Comparison -->
-          <div *ngIf="results.baselineComparison" class="card mb-4">
-            <div class="card-header bg-white border-0 pt-3">
-              <h5 class="fw-bold"><i class="bi bi-arrow-left-right me-2" style="color: #ea580c;"></i>Baseline Comparison</h5>
-            </div>
-            <div class="card-body">
-              <div class="row text-center">
-                <div class="col-md-4">
-                  <small class="text-muted d-block">SMS-Only Reachability</small>
-                  <span class="fs-4 fw-bold">{{ formatPercent(results.baselineComparison.smsOnlyReachability) }}</span>
-                </div>
-                <div class="col-md-4">
-                  <small class="text-muted d-block">Proposed Reachability</small>
-                  <span class="fs-4 fw-bold" style="color: #059669;">{{ formatPercent(results.baselineComparison.proposedReachability) }}</span>
-                </div>
-                <div class="col-md-4">
-                  <small class="text-muted d-block">Improvement</small>
-                  <span class="fs-4 fw-bold" style="color: #ea580c;">{{ formatPercent(results.baselineComparison.improvement) }}</span>
+            <!-- Accordion: Channels -->
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCh">
+                  <i class="bi bi-broadcast me-2" style="color: #16a34a;"></i>
+                  <strong>COA Channel Selection</strong>
+                </button>
+              </h2>
+              <div id="collapseCh" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="row g-3">
+                    <div class="col-md-4" *ngFor="let ch of channels">
+                      <div class="card text-center" [style.border-top]="'3px solid ' + ch.color">
+                        <div class="card-body">
+                          <h6 class="fw-bold" [style.color]="ch.color">{{ ch.label }}</h6>
+                          <div class="fs-3 fw-bold">{{ ch.count | number }}</div>
+                          <div class="text-muted">{{ ch.percentage }}%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Chart -->
-          <div class="card mb-4">
-            <div class="card-header bg-white border-0 pt-3">
-              <h5 class="fw-bold"><i class="bi bi-pie-chart me-2" style="color: #ea580c;"></i>Channel Distribution Chart</h5>
+            <!-- Accordion: Baseline Comparison -->
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBl">
+                  <i class="bi bi-arrow-left-right me-2" style="color: #ea580c;"></i>
+                  <strong>Baseline Comparison — SMS-Only vs Proposed</strong>
+                </button>
+              </h2>
+              <div id="collapseBl" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="row text-center">
+                    <div class="col-md-4">
+                      <small class="text-muted d-block">SMS-Only Baseline</small>
+                      <span class="fs-3 fw-bold" style="color: #94a3b8;">{{ results.baseline_comparison?.sms_only_reachability }}%</span>
+                    </div>
+                    <div class="col-md-4">
+                      <small class="text-muted d-block">Proposed Multi-Channel</small>
+                      <span class="fs-3 fw-bold" style="color: #4f46e5;">{{ results.baseline_comparison?.proposed_reachability }}%</span>
+                    </div>
+                    <div class="col-md-4">
+                      <small class="text-muted d-block">Improvement</small>
+                      <span class="fs-3 fw-bold" style="color: #059669;">+{{ results.baseline_comparison?.improvement_pp }}pp</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="card-body text-center">
-              <img [src]="chartUrl" alt="Channel Distribution" class="img-fluid" style="max-width: 700px;"
-                   (error)="chartError = true" *ngIf="!chartError" />
-              <p *ngIf="chartError" class="text-muted">Chart image not available.</p>
+
+            <!-- Accordion: Chart -->
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseChart">
+                  <i class="bi bi-pie-chart me-2" style="color: #4f46e5;"></i>
+                  <strong>Visualization</strong>
+                </button>
+              </h2>
+              <div id="collapseChart" class="accordion-collapse collapse show">
+                <div class="accordion-body text-center">
+                  <img [src]="chartUrl" alt="Channel Distribution" class="img-fluid" style="max-width: 900px;"
+                       (error)="chartError = true" *ngIf="!chartError" />
+                  <p *ngIf="chartError" class="text-muted">Chart not available.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -208,15 +264,10 @@ export class WorkflowRunDetailComponent implements OnInit {
         this.run = data;
         this.loading = false;
         this.chartUrl = `${this.baseUrl}/${this.runId}/chart/channel_distribution.png`;
-        if (data.runStatus === 'COMPLETED') {
-          this.loadResults();
-        }
+        if (data.runStatus === 'COMPLETED') this.loadResults();
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 
@@ -225,56 +276,45 @@ export class WorkflowRunDetailComponent implements OnInit {
     this.http.get<any>(`${this.baseUrl}/${this.runId}/results`).subscribe({
       next: (data) => {
         this.results = data;
-        this.buildContextStates();
-        this.buildChannels();
+        this.buildContextStates(data);
+        this.buildChannels(data);
         this.resultsLoading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.results = null;
-        this.resultsLoading = false;
-        this.cdr.detectChanges();
-      }
+      error: () => { this.resultsLoading = false; this.cdr.detectChanges(); }
     });
   }
 
-  buildContextStates() {
-    const dist = this.results?.contextStateDistribution;
-    if (!dist) return;
-    const labels: Record<string, string> = {
-      REACHABLE_MOBILE: 'Reachable (Mobile)',
-      REACHABLE_STATIONARY: 'Reachable (Stationary)',
-      UNREACHABLE: 'Unreachable'
+  buildContextStates(data: any) {
+    const dist = data.context_state_distribution || {};
+    const rates = data.noshow_rate_by_context || {};
+    const meta: Record<string, { label: string; color: string }> = {
+      REACHABLE_MOBILE: { label: 'Reachable (Mobile)', color: '#4f46e5' },
+      REACHABLE_STATIONARY: { label: 'Reachable (Stationary)', color: '#16a34a' },
+      UNREACHABLE: { label: 'Unreachable', color: '#ea580c' }
     };
-    this.contextStates = Object.keys(dist).map(key => ({
-      label: labels[key] || key,
-      count: dist[key]?.count ?? 0,
-      percentage: dist[key]?.percentage,
-      noShowRate: dist[key]?.noShowRate
+    this.contextStates = Object.keys(dist).map(k => ({
+      label: meta[k]?.label || k,
+      color: meta[k]?.color || '#6b7280',
+      count: dist[k]?.count || 0,
+      percentage: dist[k]?.percentage || 0,
+      noShowRate: rates[k] || 0
     }));
   }
 
-  buildChannels() {
-    const dist = this.results?.channelDistribution;
-    if (!dist) return;
-    const labels: Record<string, string> = {
-      VOICE_IVR: 'Voice IVR',
-      SMS_DEEPLINK: 'SMS Deeplink',
-      CALLBACK: 'Callback'
+  buildChannels(data: any) {
+    const dist = data.channel_distribution || {};
+    const meta: Record<string, { label: string; color: string }> = {
+      VOICE_IVR: { label: 'Voice IVR', color: '#4f46e5' },
+      SMS_DEEPLINK: { label: 'SMS Deep-Link', color: '#16a34a' },
+      CALLBACK: { label: 'Callback', color: '#ea580c' }
     };
-    this.channels = Object.keys(dist).map(key => ({
-      label: labels[key] || key,
-      count: dist[key]?.count ?? 0,
-      percentage: dist[key]?.percentage
+    this.channels = Object.keys(dist).map(k => ({
+      label: meta[k]?.label || k,
+      color: meta[k]?.color || '#6b7280',
+      count: dist[k]?.count || 0,
+      percentage: dist[k]?.percentage || 0
     }));
-  }
-
-  formatPercent(val: any): string {
-    if (val == null) return '—';
-    if (typeof val === 'number') {
-      return val <= 1 ? (val * 100).toFixed(1) + '%' : val.toFixed(1) + '%';
-    }
-    return String(val);
   }
 
   statusColor(status: string) {
