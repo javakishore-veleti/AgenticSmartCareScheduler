@@ -1,4 +1,4 @@
-package com.agenticcare.web.controller.admin;
+package com.agenticcare.web.controller.agentic;
 
 import com.agenticcare.dao.entity.AgenticOutreachActionEntity;
 import com.agenticcare.dao.repository.AgenticOutreachActionRepository;
@@ -13,24 +13,23 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/smart-care/api/admin/v1/agentic-actions")
-@Tag(name = "Admin - Agentic Actions", description = "Per-patient outreach action records from agentic AI")
-public class AdminAgenticActionController {
+@RequestMapping("/smart-care/api/agentic/v1/outreach-actions")
+@Tag(name = "Agentic - Outreach Actions", description = "Per-patient outreach action records from agentic AI agents")
+public class AgenticOutreachActionController {
 
-    private static final Logger log = LoggerFactory.getLogger(AdminAgenticActionController.class);
+    private static final Logger log = LoggerFactory.getLogger(AgenticOutreachActionController.class);
     private final AgenticOutreachActionRepository repo;
 
-    public AdminAgenticActionController(AgenticOutreachActionRepository repo) {
+    public AgenticOutreachActionController(AgenticOutreachActionRepository repo) {
         this.repo = repo;
     }
 
     @PostMapping
-    @Operation(summary = "Record an agentic outreach action (called by agent DAG)")
+    @Operation(summary = "Record an agentic outreach action (called by agent DAG per patient)")
     public ResponseEntity<Map<String, Object>> recordAction(@RequestBody Map<String, Object> req) {
         String actionKey = (String) req.get("actionKey");
-        log.info(">>> POST /agentic-actions key={}", actionKey);
+        log.info(">>> POST /agentic/outreach-actions key={}", actionKey);
 
-        // Upsert — skip if already recorded (idempotent)
         if (actionKey != null && repo.findByActionKey(actionKey).isPresent()) {
             return ResponseEntity.ok(Map.of("status", "already_exists", "actionKey", actionKey));
         }
@@ -55,16 +54,16 @@ public class AdminAgenticActionController {
     }
 
     @GetMapping("/by-run/{workflowRunId}")
-    @Operation(summary = "Get all actions for a workflow run")
+    @Operation(summary = "Get all outreach actions for a workflow run")
     public ResponseEntity<List<AgenticOutreachActionEntity>> getByRun(@PathVariable Long workflowRunId) {
-        log.info(">>> GET /agentic-actions/by-run/{}", workflowRunId);
+        log.info(">>> GET /agentic/outreach-actions/by-run/{}", workflowRunId);
         return ResponseEntity.ok(repo.findByWorkflowRunIdOrderByCreatedAtDesc(workflowRunId));
     }
 
     @GetMapping("/by-patient/{patientId}")
-    @Operation(summary = "Get all actions for a patient")
+    @Operation(summary = "Get all outreach actions for a patient")
     public ResponseEntity<List<AgenticOutreachActionEntity>> getByPatient(@PathVariable String patientId) {
-        log.info(">>> GET /agentic-actions/by-patient/{}", patientId);
+        log.info(">>> GET /agentic/outreach-actions/by-patient/{}", patientId);
         return ResponseEntity.ok(repo.findByPatientId(patientId));
     }
 }
