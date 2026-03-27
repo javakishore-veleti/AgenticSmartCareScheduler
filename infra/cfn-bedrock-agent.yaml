@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - Bedrock agent configuration for PCA context classification
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  BedrockAgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-bedrock-agent-role-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BedrockModelAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: '*'
+
+  # Note: Bedrock Agent creation via CloudFormation is limited.
+  # The agent is typically configured via console or AWS SDK.
+  # This template creates the IAM role and documents the configuration.
+  #
+  # PCA Agent Configuration:
+  #   Foundation Model: anthropic.claude-3-haiku-20240307-v1:0
+  #   System Prompt: "You are a Patient Context Agent. Classify patient
+  #     reachability context as REACHABLE_MOBILE, REACHABLE_STATIONARY,
+  #     or UNREACHABLE based on appointment time, engagement history,
+  #     and patient profile."
+  #   Tools: check_patient_signals, predict_risk_score, classify_context
+
+Outputs:
+  BedrockAgentRoleArn:
+    Value: !GetAtt BedrockAgentRole.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-bedrock-agent-role

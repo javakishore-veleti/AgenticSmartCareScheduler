@@ -1,0 +1,21 @@
+name: "AWS-002: Create S3 Bucket"
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      - name: Deploy S3 Bucket
+        run: |
+          aws cloudformation deploy \
+            --stack-name "smartcare-s3-bucket" \
+            --template-file infra/cfn-s3-bucket.yaml \
+            --no-fail-on-empty-changeset

@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - SQS queues for Spring Boot polling from laptop
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  WorkflowEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub smartcare-workflow-events-${Environment}
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WorkflowEventsDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  WorkflowEventsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub smartcare-workflow-events-dlq-${Environment}
+
+  OutreachResultsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub smartcare-outreach-results-${Environment}
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OutreachResultsDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  OutreachResultsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub smartcare-outreach-results-dlq-${Environment}
+
+  AdminAlertsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub smartcare-admin-alerts-${Environment}
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AdminAlertsDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  AdminAlertsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub smartcare-admin-alerts-dlq-${Environment}
+
+Outputs:
+  WorkflowEventsQueueUrl:
+    Value: !Ref WorkflowEventsQueue
+    Export:
+      Name: !Sub smartcare-${Environment}-workflow-events-queue-url
+  WorkflowEventsQueueArn:
+    Value: !GetAtt WorkflowEventsQueue.Arn
+  OutreachResultsQueueUrl:
+    Value: !Ref OutreachResultsQueue
+    Export:
+      Name: !Sub smartcare-${Environment}-outreach-results-queue-url
+  OutreachResultsQueueArn:
+    Value: !GetAtt OutreachResultsQueue.Arn
+  AdminAlertsQueueUrl:
+    Value: !Ref AdminAlertsQueue
+    Export:
+      Name: !Sub smartcare-${Environment}-admin-alerts-queue-url
+  AdminAlertsQueueArn:
+    Value: !GetAtt AdminAlertsQueue.Arn

@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - S3 bucket for datasets and workflow output
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  AccountId:
+    Type: String
+    Default: !Ref AWS::AccountId
+
+Resources:
+  DatasetBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub smartcare-datasets-${AWS::AccountId}-${Environment}
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  BucketName:
+    Value: !Ref DatasetBucket
+    Export:
+      Name: !Sub smartcare-${Environment}-dataset-bucket
+  BucketArn:
+    Value: !GetAtt DatasetBucket.Arn

@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - Step Functions state machine for PCA→COA→PSA→RRA→ACA pipeline
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-stepfn-role-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !ImportValue
+                    !Sub smartcare-${Environment}-pca-arn
+                  - !ImportValue
+                    !Sub smartcare-${Environment}-coa-arn
+              - Effect: Allow
+                Action: events:PutEvents
+                Resource: '*'
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: '*'
+
+  OutreachStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub smartcare-outreach-${Environment}
+      RoleArn: !GetAtt StepFunctionsRole.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "SmartCare PCA→COA outreach pipeline for one patient",
+          "StartAt": "PCA_AssessContext",
+          "States": {
+            "PCA_AssessContext": {
+              "Type": "Task",
+              "Resource": "${PCAFunctionArn}",
+              "Parameters": {
+                "patient.$": "$.patient",
+                "signals.$": "$.signals"
+              },
+              "ResultPath": "$.pca_output",
+              "Next": "CheckPCASkip"
+            },
+            "CheckPCASkip": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.pca_output.action",
+                  "StringEquals": "SKIPPED",
+                  "Next": "RecordSkipped"
+                }
+              ],
+              "Default": "COA_SelectAndExecute"
+            },
+            "COA_SelectAndExecute": {
+              "Type": "Task",
+              "Resource": "${COAFunctionArn}",
+              "Parameters": {
+                "pca_result.$": "$.pca_output.pca_result",
+                "patient.$": "$.patient"
+              },
+              "ResultPath": "$.coa_output",
+              "Next": "PublishResult"
+            },
+            "RecordSkipped": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::events:putEvents",
+              "Parameters": {
+                "Entries": [{
+                  "Source": "smartcare.agents.coa",
+                  "DetailType": "OutreachCompleted",
+                  "Detail": {
+                    "patient_id.$": "$.patient.patient_id",
+                    "action": "SKIPPED",
+                    "reason.$": "$.pca_output.reason"
+                  }
+                }]
+              },
+              "End": true
+            },
+            "PublishResult": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::events:putEvents",
+              "Parameters": {
+                "Entries": [{
+                  "Source": "smartcare.agents.coa",
+                  "DetailType": "OutreachCompleted",
+                  "Detail": {
+                    "patient_id.$": "$.patient.patient_id",
+                    "coa_result.$": "$.coa_output.coa_result"
+                  }
+                }]
+              },
+              "End": true
+            }
+          }
+        }
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  # Placeholder — actual ARN refs need cross-stack
+  PCAFunctionArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /smartcare/${Environment}/pca-function-arn
+      Type: String
+      Value: !ImportValue
+        !Sub smartcare-${Environment}-pca-arn
+
+Outputs:
+  StateMachineArn:
+    Value: !Ref OutreachStateMachine
+    Export:
+      Name: !Sub smartcare-${Environment}-state-machine-arn

@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - HealthLake FHIR R4 datastore for appointment data
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  HealthLakeDatastore:
+    Type: AWS::HealthLake::FHIRDatastore
+    Properties:
+      DatastoreName: !Sub smartcare-fhir-${Environment}
+      DatastoreTypeVersion: R4
+      PreloadDataConfig:
+        PreloadDataType: SYNTHEA
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+Outputs:
+  DatastoreId:
+    Value: !Ref HealthLakeDatastore
+    Export:
+      Name: !Sub smartcare-${Environment}-healthlake-id
+  DatastoreEndpoint:
+    Value: !GetAtt HealthLakeDatastore.DatastoreEndpoint

@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - Amazon Connect instance for multi-channel outreach
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  # Note: Connect instances are often created manually via console.
+  # This template creates the supporting resources.
+
+  ConnectContactFlowBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub smartcare-connect-flows-${AWS::AccountId}-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  # Contact flow definitions would be uploaded to this bucket
+  # and imported via Connect API after instance creation.
+  #
+  # Three contact flows needed:
+  # 1. IVR Flow: "Press 1 to confirm, Press 2 to reschedule"
+  # 2. SMS Flow: Deep-link with confirm/reschedule/cancel buttons
+  # 3. Callback Flow: Queue patient for next available callback slot
+
+Outputs:
+  ContactFlowBucket:
+    Value: !Ref ConnectContactFlowBucket
+    Description: S3 bucket for Connect contact flow definitions

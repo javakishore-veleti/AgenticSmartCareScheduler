@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - EventBridge bus and rules for agent coordination
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  SmartCareEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub smartcare-events-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  AppointmentEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub smartcare-appointment-event-rule-${Environment}
+      EventBusName: !Ref SmartCareEventBus
+      EventPattern:
+        source: ["smartcare.appointments"]
+        detail-type: ["AppointmentEvent"]
+      Targets:
+        - Id: WorkflowEventsQueue
+          Arn: !ImportValue
+            !Sub smartcare-${Environment}-workflow-events-queue-url
+      State: ENABLED
+
+  OutreachCompletedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub smartcare-outreach-completed-rule-${Environment}
+      EventBusName: !Ref SmartCareEventBus
+      EventPattern:
+        source: ["smartcare.agents.coa"]
+        detail-type: ["OutreachCompleted"]
+      Targets:
+        - Id: OutreachResultsQueue
+          Arn: !ImportValue
+            !Sub smartcare-${Environment}-outreach-results-queue-url
+      State: ENABLED
+
+  AdminAlertRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub smartcare-admin-alert-rule-${Environment}
+      EventBusName: !Ref SmartCareEventBus
+      EventPattern:
+        source: ["smartcare.agents"]
+        detail-type: ["AdminAlert"]
+      Targets:
+        - Id: AdminAlertsQueue
+          Arn: !ImportValue
+            !Sub smartcare-${Environment}-admin-alerts-queue-url
+      State: ENABLED
+
+Outputs:
+  EventBusArn:
+    Value: !GetAtt SmartCareEventBus.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-event-bus-arn
+  EventBusName:
+    Value: !Ref SmartCareEventBus

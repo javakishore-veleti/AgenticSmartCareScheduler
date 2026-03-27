@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - SNS topics for appointment events, outreach results, admin alerts
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  AppointmentEventTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub smartcare-appointment-events-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  OutreachResultTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub smartcare-outreach-results-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  AdminAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub smartcare-admin-alerts-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+Outputs:
+  AppointmentEventTopicArn:
+    Value: !Ref AppointmentEventTopic
+    Export:
+      Name: !Sub smartcare-${Environment}-appointment-event-topic
+  OutreachResultTopicArn:
+    Value: !Ref OutreachResultTopic
+    Export:
+      Name: !Sub smartcare-${Environment}-outreach-result-topic
+  AdminAlertTopicArn:
+    Value: !Ref AdminAlertTopic
+    Export:
+      Name: !Sub smartcare-${Environment}-admin-alert-topic

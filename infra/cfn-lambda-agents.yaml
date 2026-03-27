@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - Lambda functions for 5 agents (Python 3.12)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  AgentExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-agent-role-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SmartCareAgentPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeAgent
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - connect:StartOutboundVoiceContact
+                  - connect:GetContactAttributes
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - es:ESHttpPost
+                  - es:ESHttpPut
+                  - es:ESHttpGet
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource: '*'
+
+  PCAFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub smartcare-pca-${Environment}
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt AgentExecutionRole.Arn
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+      Tags:
+        - Key: Agent
+          Value: PCA
+        - Key: Project
+          Value: SmartCare
+
+  COAFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub smartcare-coa-${Environment}
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt AgentExecutionRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          CONNECT_INSTANCE_ID: ''
+          OUTREACH_SNS_TOPIC_ARN: !ImportValue
+            !Sub smartcare-${Environment}-outreach-result-topic
+      Tags:
+        - Key: Agent
+          Value: COA
+
+  PSAFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub smartcare-psa-${Environment}
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt AgentExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Tags:
+        - Key: Agent
+          Value: PSA
+
+  RRAFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub smartcare-rra-${Environment}
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt AgentExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Tags:
+        - Key: Agent
+          Value: RRA
+
+  ACAFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub smartcare-aca-${Environment}
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt AgentExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          OPENSEARCH_ENDPOINT: !ImportValue
+            !Sub smartcare-${Environment}-opensearch-endpoint
+      Tags:
+        - Key: Agent
+          Value: ACA
+
+Outputs:
+  PCAFunctionArn:
+    Value: !GetAtt PCAFunction.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-pca-arn
+  COAFunctionArn:
+    Value: !GetAtt COAFunction.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-coa-arn
+  PSAFunctionArn:
+    Value: !GetAtt PSAFunction.Arn
+  RRAFunctionArn:
+    Value: !GetAtt RRAFunction.Arn
+  ACAFunctionArn:
+    Value: !GetAtt ACAFunction.Arn

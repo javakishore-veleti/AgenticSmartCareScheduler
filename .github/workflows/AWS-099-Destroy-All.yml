@@ -1,0 +1,77 @@
+name: "AWS-099: Destroy All"
+on:
+  workflow_dispatch:
+    inputs:
+      destroy_connect:
+        description: "Destroy Connect"
+        type: boolean
+        default: true
+      destroy_healthlake:
+        description: "Destroy HealthLake"
+        type: boolean
+        default: true
+      destroy_stepfunctions:
+        description: "Destroy Step Functions"
+        type: boolean
+        default: true
+      destroy_lambda:
+        description: "Destroy Lambda Agents"
+        type: boolean
+        default: true
+      destroy_bedrock:
+        description: "Destroy Bedrock Agent"
+        type: boolean
+        default: true
+      destroy_opensearch:
+        description: "Destroy OpenSearch"
+        type: boolean
+        default: true
+      destroy_eventbridge:
+        description: "Destroy EventBridge"
+        type: boolean
+        default: true
+      destroy_sqs:
+        description: "Destroy SQS Queues"
+        type: boolean
+        default: true
+      destroy_sns:
+        description: "Destroy SNS Topics"
+        type: boolean
+        default: true
+      destroy_s3:
+        description: "Destroy S3 Bucket"
+        type: boolean
+        default: false
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Destroy stacks (reverse order)
+        run: |
+          destroy_stack() {
+            local name=$1
+            echo "Destroying $name..."
+            aws cloudformation delete-stack --stack-name "$name" 2>/dev/null || echo "  Stack $name not found"
+            aws cloudformation wait stack-delete-complete --stack-name "$name" 2>/dev/null || true
+            echo "  Done: $name"
+          }
+
+          [ "${{ inputs.destroy_connect }}" = "true" ] && destroy_stack "smartcare-connect"
+          [ "${{ inputs.destroy_healthlake }}" = "true" ] && destroy_stack "smartcare-healthlake"
+          [ "${{ inputs.destroy_stepfunctions }}" = "true" ] && destroy_stack "smartcare-step-functions"
+          [ "${{ inputs.destroy_lambda }}" = "true" ] && destroy_stack "smartcare-lambda-agents"
+          [ "${{ inputs.destroy_bedrock }}" = "true" ] && destroy_stack "smartcare-bedrock-agent"
+          [ "${{ inputs.destroy_opensearch }}" = "true" ] && destroy_stack "smartcare-opensearch"
+          [ "${{ inputs.destroy_eventbridge }}" = "true" ] && destroy_stack "smartcare-eventbridge"
+          [ "${{ inputs.destroy_sqs }}" = "true" ] && destroy_stack "smartcare-sqs-queues"
+          [ "${{ inputs.destroy_sns }}" = "true" ] && destroy_stack "smartcare-sns-topics"
+          [ "${{ inputs.destroy_s3 }}" = "true" ] && destroy_stack "smartcare-s3-bucket"
+
+          echo "All selected stacks destroyed."

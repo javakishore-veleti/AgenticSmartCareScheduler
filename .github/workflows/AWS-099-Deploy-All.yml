@@ -1,0 +1,125 @@
+name: "AWS-099: Deploy All"
+on:
+  workflow_dispatch:
+    inputs:
+      validate_vpc:
+        description: "Validate VPC"
+        type: boolean
+        default: true
+      create_s3:
+        description: "Create S3 Bucket"
+        type: boolean
+        default: true
+      create_sns:
+        description: "Create SNS Topics"
+        type: boolean
+        default: true
+      create_sqs:
+        description: "Create SQS Queues"
+        type: boolean
+        default: true
+      create_eventbridge:
+        description: "Create EventBridge"
+        type: boolean
+        default: true
+      create_opensearch:
+        description: "Create OpenSearch"
+        type: boolean
+        default: false
+      create_bedrock:
+        description: "Create Bedrock Agent"
+        type: boolean
+        default: false
+      create_lambda:
+        description: "Create Lambda Agents"
+        type: boolean
+        default: true
+      create_stepfunctions:
+        description: "Create Step Functions"
+        type: boolean
+        default: true
+      create_connect:
+        description: "Create Connect"
+        type: boolean
+        default: false
+      create_healthlake:
+        description: "Create HealthLake"
+        type: boolean
+        default: false
+      generate_env:
+        description: "Generate .env file"
+        type: boolean
+        default: true
+
+jobs:
+  validate-vpc:
+    if: inputs.validate_vpc
+    uses: ./.github/workflows/AWS-001-Validate-VPC.yml
+    secrets: inherit
+
+  create-s3:
+    if: inputs.create_s3
+    needs: [validate-vpc]
+    if: always() && (inputs.create_s3)
+    uses: ./.github/workflows/AWS-002-Create-S3-Bucket.yml
+    secrets: inherit
+
+  create-sns:
+    if: inputs.create_sns
+    uses: ./.github/workflows/AWS-003-Create-SNS-Topics.yml
+    secrets: inherit
+
+  create-sqs:
+    if: inputs.create_sqs
+    needs: [create-sns]
+    if: always() && (inputs.create_sqs)
+    uses: ./.github/workflows/AWS-004-Create-SQS-Queues.yml
+    secrets: inherit
+
+  create-eventbridge:
+    if: inputs.create_eventbridge
+    needs: [create-sqs]
+    if: always() && (inputs.create_eventbridge)
+    uses: ./.github/workflows/AWS-005-Create-EventBridge.yml
+    secrets: inherit
+
+  create-opensearch:
+    if: inputs.create_opensearch
+    uses: ./.github/workflows/AWS-006-Create-OpenSearch.yml
+    secrets: inherit
+
+  create-bedrock:
+    if: inputs.create_bedrock
+    uses: ./.github/workflows/AWS-007-Create-Bedrock-Agent.yml
+    secrets: inherit
+
+  create-lambda:
+    if: inputs.create_lambda
+    needs: [create-sns, create-eventbridge]
+    if: always() && (inputs.create_lambda)
+    uses: ./.github/workflows/AWS-008-Create-Lambda-Agents.yml
+    secrets: inherit
+
+  create-stepfunctions:
+    if: inputs.create_stepfunctions
+    needs: [create-lambda]
+    if: always() && (inputs.create_stepfunctions)
+    uses: ./.github/workflows/AWS-009-Create-StepFunctions.yml
+    secrets: inherit
+
+  create-connect:
+    if: inputs.create_connect
+    uses: ./.github/workflows/AWS-010-Create-Connect.yml
+    secrets: inherit
+
+  create-healthlake:
+    if: inputs.create_healthlake
+    uses: ./.github/workflows/AWS-011-Create-HealthLake.yml
+    secrets: inherit
+
+  generate-env:
+    if: inputs.generate_env
+    needs: [create-s3, create-sns, create-sqs, create-eventbridge, create-lambda, create-stepfunctions]
+    if: always() && (inputs.generate_env)
+    uses: ./.github/workflows/AWS-012-Generate-Env-File.yml
+    secrets: inherit
