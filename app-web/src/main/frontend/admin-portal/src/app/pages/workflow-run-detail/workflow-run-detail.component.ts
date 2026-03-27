@@ -379,6 +379,65 @@ import { HttpClient } from '@angular/common/http';
               </div>
             </div>
 
+            <!-- Accordion: Per-Patient Agentic Actions (from DB) -->
+            <div class="accordion-item" *ngIf="agenticActions.length > 0">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAgentic">
+                  <i class="bi bi-cpu me-2" style="color: #7c3aed;"></i>
+                  <strong>Per-Patient Agentic Actions</strong>
+                  <span class="badge ms-2" style="background: #ede9fe; color: #7c3aed;">{{ agenticActions.length }} actions</span>
+                </button>
+              </h2>
+              <div id="collapseAgentic" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div *ngIf="agenticActionsLoading" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm" style="color: #7c3aed;"></div>
+                  </div>
+                  <div *ngFor="let a of pagedAgenticActions" class="card mb-2" [style.border-left]="'3px solid ' + getChannelColor(a.channelSelected)">
+                    <div class="card-body py-2">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold">Patient <small class="text-muted">{{ a.patientId }}</small></span>
+                        <div>
+                          <span class="badge me-1" [style.background]="getContextColor(a.contextState) + '22'"
+                                [style.color]="getContextColor(a.contextState)">{{ a.contextState }}</span>
+                          <span class="badge me-1" [style.background]="getChannelColor(a.channelSelected) + '22'"
+                                [style.color]="getChannelColor(a.channelSelected)">{{ a.channelSelected }}</span>
+                          <span class="badge me-1"
+                                [style.background]="getOutcomeColor(a.patientResponse) + '22'"
+                                [style.color]="getOutcomeColor(a.patientResponse)">{{ a.patientResponse || 'N/A' }}</span>
+                          <span class="badge"
+                                [style.background]="a.actionStatus === 'COMPLETED' ? '#d1fae5' : a.actionStatus === 'FAILED' ? '#fee2e2' : '#fef3c7'"
+                                [style.color]="a.actionStatus === 'COMPLETED' ? '#059669' : a.actionStatus === 'FAILED' ? '#dc2626' : '#d97706'">{{ a.actionStatus }}</span>
+                        </div>
+                      </div>
+                      <div *ngIf="a.parsedDetail" class="mt-1">
+                        <button class="btn btn-sm px-2 py-0" style="font-size: 0.75rem; color: #7c3aed; background: #ede9fe; border-radius: 6px;"
+                                (click)="a._expanded = !a._expanded">
+                          <i class="bi" [class.bi-chevron-down]="!a._expanded" [class.bi-chevron-up]="a._expanded"></i>
+                          {{ a._expanded ? 'Hide' : 'Show' }} Detail
+                        </button>
+                        <pre *ngIf="a._expanded" class="mt-2 mb-0 small p-2" style="background: #f8f9fa; border-radius: 8px; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{{ a.parsedDetail | json }}</pre>
+                      </div>
+                    </div>
+                  </div>
+                  <nav *ngIf="agenticPages > 1" class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-center">
+                      <li class="page-item" [class.disabled]="agenticPage === 1">
+                        <a class="page-link" (click)="setAgenticPage(agenticPage - 1)" style="color: #7c3aed;">Prev</a>
+                      </li>
+                      <li class="page-item" *ngFor="let p of agenticPageArr" [class.active]="p === agenticPage">
+                        <a class="page-link" (click)="setAgenticPage(p)"
+                           [style.background]="p === agenticPage ? '#7c3aed' : ''" [style.color]="p === agenticPage ? 'white' : '#7c3aed'">{{ p }}</a>
+                      </li>
+                      <li class="page-item" [class.disabled]="agenticPage === agenticPages">
+                        <a class="page-link" (click)="setAgenticPage(agenticPage + 1)" style="color: #7c3aed;">Next</a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+            </div>
+
             <!-- Accordion: Action Log (per-patient details) -->
             <div class="accordion-item" *ngIf="results.action_log && results.action_log.length > 0">
               <h2 class="accordion-header">
@@ -450,7 +509,16 @@ export class WorkflowRunDetailComponent implements OnInit {
   logPageArr: number[] = [];
   private logPageSize = 10;
 
+  agenticActions: any[] = [];
+  agenticActionsLoading = false;
+  pagedAgenticActions: any[] = [];
+  agenticPage = 1;
+  agenticPages = 1;
+  agenticPageArr: number[] = [];
+  private agenticPageSize = 10;
+
   private baseUrl = window.location.origin + '/smart-care/api/admin/v1/workflow-runs';
+  private agenticActionsUrl = window.location.origin + '/smart-care/api/agents/customer/v1/outreach-actions/by-run/';
   private runId!: string;
 
   constructor(private http: HttpClient, private route: ActivatedRoute, private cdr: ChangeDetectorRef) {}
@@ -468,6 +536,10 @@ export class WorkflowRunDetailComponent implements OnInit {
         this.loading = false;
         this.chartUrl = `${this.baseUrl}/${this.runId}/chart/channel_distribution.png`;
         if (data.runStatus === 'COMPLETED') this.loadResults();
+        const wk = (data.workflowKey || '').toLowerCase();
+        if (wk.includes('realtime') || wk.includes('outreach_batch')) {
+          this.loadAgenticActions();
+        }
         this.cdr.detectChanges();
       },
       error: () => { this.loading = false; this.cdr.detectChanges(); }
@@ -531,6 +603,38 @@ export class WorkflowRunDetailComponent implements OnInit {
     const start = (page - 1) * this.logPageSize;
     this.pagedLog = (this.results?.action_log || []).slice(start, start + this.logPageSize);
     this.cdr.detectChanges();
+  }
+
+  loadAgenticActions() {
+    this.agenticActionsLoading = true;
+    this.http.get<any[]>(this.agenticActionsUrl + this.runId).subscribe({
+      next: (data) => {
+        this.agenticActions = (data || []).map(a => ({
+          ...a,
+          parsedDetail: this.tryParseJson(a.actionDetailJson),
+          _expanded: false
+        }));
+        this.agenticPages = Math.max(1, Math.ceil(this.agenticActions.length / this.agenticPageSize));
+        this.agenticPageArr = Array.from({ length: this.agenticPages }, (_, i) => i + 1);
+        this.setAgenticPage(1);
+        this.agenticActionsLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.agenticActionsLoading = false; this.cdr.detectChanges(); }
+    });
+  }
+
+  setAgenticPage(page: number) {
+    if (page < 1 || page > this.agenticPages) return;
+    this.agenticPage = page;
+    const start = (page - 1) * this.agenticPageSize;
+    this.pagedAgenticActions = this.agenticActions.slice(start, start + this.agenticPageSize);
+    this.cdr.detectChanges();
+  }
+
+  private tryParseJson(jsonStr: string | null): any {
+    if (!jsonStr) return null;
+    try { return JSON.parse(jsonStr); } catch { return null; }
   }
 
   getContextColor(state: string): string {

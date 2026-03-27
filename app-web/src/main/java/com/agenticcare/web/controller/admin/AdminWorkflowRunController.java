@@ -66,16 +66,6 @@ public class AdminWorkflowRunController {
         return ResponseEntity.ok(service.submit(req));
     }
 
-    @PutMapping("/{id}/status")
-    @Operation(summary = "Update workflow run status (called by broker consumer)")
-    public ResponseEntity<Map<String, Object>> updateStatus(@PathVariable Long id,
-                                                             @RequestBody Map<String, String> req) {
-        log.info(">>> PUT /workflow-runs/{}/status status={}", id, req.get("status"));
-        return ResponseEntity.ok(service.updateStatus(id,
-                req.get("status"), req.get("externalRunId"),
-                req.get("resultPath"), req.get("errorMessage")));
-    }
-
     @GetMapping("/{id}/results")
     @Operation(summary = "Get workflow run results JSON")
     public ResponseEntity<?> getResults(@PathVariable Long id) {
