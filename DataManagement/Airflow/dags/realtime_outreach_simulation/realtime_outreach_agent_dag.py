@@ -245,55 +245,89 @@ def coa_select_and_execute(**kwargs):
 
 
 def publish_action(**kwargs):
-    """Publish the action record to message broker and save to output directory."""
+    """Post action record to Spring Boot API and publish to message broker."""
+    import requests
+    from smartcare_utils import get_api_url, get_broker_url
+
     conf = kwargs.get("dag_run").conf or {}
     patient_id = conf.get("patient_id", "unknown")
     batch_run_id = conf.get("batch_run_id")
-    output_dir = conf.get("output_dir", f"/tmp/smartcare_agent_{patient_id}")
+    dag_run_id = kwargs.get("dag_run").run_id if kwargs.get("dag_run") else "unknown"
 
     coa_json = kwargs['ti'].xcom_pull(key='coa_result', task_ids='coa_select_and_execute')
     coa = json.loads(coa_json)
 
-    # Build complete action record
-    action_record = {
-        "patient_id": patient_id,
-        "patient_name": f"Patient {patient_id}",
-        "age": conf.get("age"),
-        "appointment_day": conf.get("appointment_day"),
-        "actual_noshow": conf.get("actual_noshow"),
+    # Determine action status
+    needs_admin = coa["needs_admin_attention"]
+    if coa["patient_response"] in ['confirmed', 'rescheduled']:
+        action_status = "ACTION_TAKEN"
+    elif needs_admin:
+        action_status = "ESCALATED_TO_ADMIN"
+    else:
+        action_status = "ACTION_TAKEN"
+
+    # Build full detail JSON
+    action_detail = {
+        "patient_profile": {
+            "age": conf.get("age"),
+            "appointment_day": conf.get("appointment_day"),
+            "lead_time_days": conf.get("lead_time_days"),
+            "sms_history": bool(conf.get("sms_received")),
+            "chronic_conditions": {
+                "hypertension": bool(conf.get("hypertension")),
+                "diabetes": bool(conf.get("diabetes"))
+            },
+            "actual_noshow": conf.get("actual_noshow")
+        },
         "pca_assessment": {
             "context_state": coa["pca_context"],
             "urgency": coa["pca_urgency"],
             "risk_factors": coa["pca_risk_factors"],
             "reasoning": coa["pca_reasoning"]
         },
-        "coa_action": {
+        "coa_decision": {
             "channel": coa["channel"],
             "channel_label": coa["channel_label"],
             "service": coa["channel_service"],
-            "reasoning": coa["coa_reasoning"],
+            "reasoning": coa["coa_reasoning"]
+        },
+        "outcome": {
             "patient_response": coa["patient_response"],
             "action_taken": coa["action_taken"],
-            "needs_admin": coa["needs_admin_attention"]
-        },
-        "timestamp": datetime.now().isoformat()
+            "escalated_to_admin": needs_admin
+        }
     }
 
-    # Save to output directory (shared with batch DAG)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        action_file = os.path.join(output_dir, f"action_{patient_id}.json")
-        with open(action_file, 'w') as f:
-            json.dump(action_record, f, indent=2)
+    # Composite key: {batchRunId}_{engineInstanceId}_{patientId} (max 100 chars)
+    action_key = f"{batch_run_id}_{dag_run_id[:40]}_{patient_id}"
+    if len(action_key) > 100:
+        action_key = action_key[:100]
+
+    # POST to Spring Boot API
+    api_url = get_api_url()
+    try:
+        resp = requests.post(f"{api_url}/agentic-actions", json={
+            "actionKey": action_key,
+            "workflowRunId": batch_run_id,
+            "workflowEngineType": "AIRFLOW",
+            "engineInstanceId": dag_run_id,
+            "patientId": patient_id,
+            "contextState": coa["pca_context"],
+            "channelSelected": coa["channel"],
+            "patientResponse": coa["patient_response"],
+            "actionStatus": action_status,
+            "actionDetailJson": json.dumps(action_detail)
+        }, timeout=10)
+        print(f"   API response: {resp.status_code}")
+    except Exception as e:
+        print(f"   API post failed: {e}")
 
     # Publish to message broker
     notify_broker(batch_run_id or patient_id, DAG_ID, "ACTION_COMPLETED")
 
     # Publish admin alert if needed
-    if coa["needs_admin_attention"]:
+    if needs_admin:
         try:
-            from smartcare_utils import get_broker_url
-            import requests
             broker_url = get_broker_url()
             requests.post(f"{broker_url}/publish", json={
                 "queueName": "admin_alert_event",
@@ -307,9 +341,9 @@ def publish_action(**kwargs):
                 "ctxData": {"dagId": DAG_ID, "patientId": patient_id}
             }, timeout=5)
         except Exception as e:
-            print(f"Admin alert publish failed: {e}")
+            print(f"   Admin alert publish failed: {e}")
 
-    print(f"✅ Agent completed for {patient_id}: {coa['patient_response']} via {coa['channel_label']}")
+    print(f"✅ Agent completed for {patient_id}: {coa['patient_response']} via {coa['channel_label']} [{action_status}]")
 
 
 def on_failure(context):
