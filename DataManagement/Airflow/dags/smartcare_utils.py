@@ -98,13 +98,22 @@ def resolve_output_dir(output_dir, run_id):
     return resolved
 
 
+def get_agents_admin_url():
+    """Get agents/admin API base URL for workflow run updates."""
+    try:
+        conn = BaseHook.get_connection("smartcare_api")
+        return f"{conn.schema}://{conn.host}:{conn.port}/smart-care/api/agents/admin/v1"
+    except Exception:
+        return "http://host.docker.internal:8080/smart-care/api/agents/admin/v1"
+
+
 def update_run_status(run_id, status, error_message=None):
-    """Directly update workflow run status via Spring Boot API."""
-    api_url = get_api_url()
+    """Update workflow run status via agents/admin API."""
+    agents_url = get_agents_admin_url()
     try:
         body = {"status": status}
         if error_message:
             body["errorMessage"] = error_message
-        requests.put(f"{api_url}/workflow-runs/{run_id}/status", json=body, timeout=5)
+        requests.put(f"{agents_url}/workflow-runs/{run_id}/status", json=body, timeout=5)
     except Exception as e:
         print(f"API status update failed: {e}")

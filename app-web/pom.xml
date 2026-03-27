@@ -15,6 +15,7 @@
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-provider</artifactId></dependency>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-resource</artifactId></dependency>
         <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-audit</artifactId></dependency>
+        <dependency><groupId>com.agenticcare</groupId><artifactId>app-agent-workflow-updates</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
         <dependency><groupId>org.springdoc</groupId><artifactId>springdoc-openapi-starter-webmvc-ui</artifactId></dependency>

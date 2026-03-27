@@ -12,5 +12,6 @@
         <module>app-agent-provider</module>
         <module>app-agent-resource</module>
         <module>app-agent-audit</module>
+        <module>app-agent-workflow-updates</module>
     </modules>
 </project>

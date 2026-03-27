@@ -122,6 +122,11 @@
             </dependency>
             <dependency>
                 <groupId>com.agenticcare</groupId>
+                <artifactId>app-agent-workflow-updates</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.agenticcare</groupId>
                 <artifactId>app-domain-admin</artifactId>
                 <version>${project.version}</version>
             </dependency>
