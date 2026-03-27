@@ -15,9 +15,13 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addViewController("/portal/admin/").setViewName("forward:/portal/admin/index.html");
         registry.addViewController("/portal/admin").setViewName("forward:/portal/admin/index.html");
 
-        // Forward Angular SPA routes (deep links) to index.html
+        // Forward Angular SPA routes (deep links, any depth) to index.html
         registry.addViewController("/portal/customer/{path:[^\\.]*}").setViewName("forward:/portal/customer/index.html");
+        registry.addViewController("/portal/customer/{path:[^\\.]*}/{sub:[^\\.]*}").setViewName("forward:/portal/customer/index.html");
+        registry.addViewController("/portal/customer/{path:[^\\.]*}/{sub:[^\\.]*}/{rest:[^\\.]*}").setViewName("forward:/portal/customer/index.html");
         registry.addViewController("/portal/admin/{path:[^\\.]*}").setViewName("forward:/portal/admin/index.html");
+        registry.addViewController("/portal/admin/{path:[^\\.]*}/{sub:[^\\.]*}").setViewName("forward:/portal/admin/index.html");
+        registry.addViewController("/portal/admin/{path:[^\\.]*}/{sub:[^\\.]*}/{rest:[^\\.]*}").setViewName("forward:/portal/admin/index.html");
 
         // Root redirect to customer portal
         registry.addViewController("/").setViewName("forward:/portal/customer/index.html");
