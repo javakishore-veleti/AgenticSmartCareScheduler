@@ -419,10 +419,123 @@ smartcare:
 "aws:generate-config": "mvn exec:java -Dexec.mainClass=com.agenticcare.config.AwsConfigGenerator"
 ```
 
-### Other Backlog Items
-- Agent Java implementations (PCA, COA, RRA, PSA, ACA) in Lambda handler format
-- CloudFormation templates (infra/ folder)
-- Lambda function code (infra/lambda/pca/, coa/, etc.)
-- Admin portal stub pages (Agents, Scenarios, Analytics, Digital Twin, Audit Log)
-- Live scenario execution on AWS
-- AWS Connect contact flow definitions (IVR, SMS, callback)
+### Technology Decision: Python Lambda (NOT Java)
+
+Java Lambda cold starts are 5-10 seconds — too slow for per-patient real-time outreach. All 5 agent Lambda functions are **Python 3.12** using boto3 for Bedrock/Connect/SNS. Same language as Airflow DAGs — logic can be shared.
+
+| Component | Language | Where |
+|---|---|---|
+| Spring Boot (admin portal, workflow mgmt, DB, SQS polling) | Java | Laptop / EC2 / ECS |
+| Lambda agents (PCA, COA, PSA, RRA, ACA) | Python 3.12 | AWS Lambda |
+| Airflow DAGs (batch dispatcher) | Python | Docker (local) / MWAA (AWS) |
+| Bedrock + Connect + SNS calls | Python (boto3) | Inside Lambda |
+
+Lambda code lives in: `infra/lambda/pca/`, `infra/lambda/coa/`, `infra/lambda/psa/`, `infra/lambda/rra/`, `infra/lambda/aca/`
+Each folder has: `handler.py`, `requirements.txt`, and shares common utils.
+
+---
+
+## AWS Deployment — Task Breakdown with Status
+
+### Phase A: GitHub Actions — Infrastructure (CloudFormation)
+
+| # | Task | GH Action | CloudFormation | Status | Notes |
+|---|---|---|---|---|---|
+| A1 | Validate VPC from secrets | `AWS-001-Validate-VPC.yml` | N/A (CLI check) | **DONE** (YAML created) | Checks `AWS_VPC_ID` secret, prints subnets |
+| A2 | Create S3 bucket for datasets | `AWS-002-Create-S3-Bucket.yml` | `infra/cfn-s3-bucket.yaml` | PENDING | Bucket: `smartcare-datasets-{account}`, prefix: `datasets/` |
+| A3 | Create SNS topics | `AWS-003-Create-SNS-Topics.yml` | `infra/cfn-sns-topics.yaml` | **DONE** (YAML created, CFN pending) | Topics: appointment_event, outreach_result, admin_alert |
+| A4 | Create SQS queues | `AWS-004-Create-SQS-Queues.yml` | `infra/cfn-sqs-queues.yaml` | **DONE** (YAML created, CFN pending) | Queues Spring Boot polls: workflow_events, outreach_results, admin_alerts |
+| A5 | Create EventBridge bus + rules | `AWS-005-Create-EventBridge.yml` | `infra/cfn-eventbridge.yaml` | **DONE** (YAML created, CFN pending) | Routes events to SQS + Lambda |
+| A6 | Create OpenSearch domain | `AWS-006-Create-OpenSearch.yml` | `infra/cfn-opensearch.yaml` | **DONE** (YAML created, CFN pending) | 4 indices: appointments, outreach_events, provider_schedule, audit_log |
+| A7 | Create Bedrock agent (PCA) | `AWS-007-Create-Bedrock-Agent.yml` | `infra/cfn-bedrock-agent.yaml` | **DONE** (YAML created, CFN pending) | Claude foundation model for C_p classification |
+| A8 | Create Lambda functions (5 agents) | `AWS-008-Create-Lambda-Agents.yml` | `infra/cfn-lambda-agents.yaml` | **DONE** (YAML created, CFN pending) | Python 3.12 functions: PCA, COA, PSA, RRA, ACA |
+| A9 | Create Step Functions state machine | `AWS-009-Create-StepFunctions.yml` | `infra/cfn-step-functions.yaml` | **DONE** (YAML created, CFN pending) | Orchestrator: PCA→COA→PSA→RRA→ACA |
+| A10 | Create Connect instance | `AWS-010-Create-Connect.yml` | `infra/cfn-connect.yaml` | **DONE** (YAML created, CFN pending) | Contact flows: IVR, SMS, callback |
+| A11 | Create HealthLake datastore | `AWS-011-Create-HealthLake.yml` | `infra/cfn-healthlake.yaml` | PENDING | FHIR R4 appointment data |
+| A12 | Generate .env.aws-integration | `AWS-012-Generate-Env-File.yml` | N/A (reads stack outputs) | PENDING | Writes all ARNs, URLs, IDs to .env file |
+| A13 | Deploy-All wrapper | `AWS-099-Deploy-All.yml` | N/A (calls A1-A12) | PENDING | Checkbox inputs for selective deployment |
+| A14 | Destroy-All wrapper | `AWS-099-Destroy-All.yml` | N/A (deletes stacks) | PENDING | Checkbox inputs for selective teardown |
+
+### Phase B: CloudFormation Templates
+
+| # | Task | File | Status | Notes |
+|---|---|---|---|---|
+| B1 | S3 bucket template | `infra/cfn-s3-bucket.yaml` | PENDING | Bucket with lifecycle, versioning, dataset prefix |
+| B2 | SNS topics template | `infra/cfn-sns-topics.yaml` | PENDING | 3 topics with output ARNs |
+| B3 | SQS queues template | `infra/cfn-sqs-queues.yaml` | PENDING | 3 queues + DLQs, SNS subscriptions |
+| B4 | EventBridge template | `infra/cfn-eventbridge.yaml` | PENDING | Custom bus, rules for appointment events → SQS + Lambda |
+| B5 | OpenSearch template | `infra/cfn-opensearch.yaml` | PENDING | t3.small.search domain, 4 index templates |
+| B6 | Bedrock agent template | `infra/cfn-bedrock-agent.yaml` | PENDING | Agent with Claude model, knowledge base for patient history |
+| B7 | Lambda agents template | `infra/cfn-lambda-agents.yaml` | PENDING | 5 functions, IAM roles, env vars, layers |
+| B8 | Step Functions template | `infra/cfn-step-functions.yaml` | PENDING | State machine definition: PCA→COA→PSA→RRA→ACA |
+| B9 | Connect template | `infra/cfn-connect.yaml` | PENDING | Instance + 3 contact flows (IVR, SMS, callback) |
+| B10 | HealthLake template | `infra/cfn-healthlake.yaml` | PENDING | FHIR R4 datastore |
+
+### Phase C: Lambda Function Code (Python)
+
+| # | Task | Path | Status | Notes |
+|---|---|---|---|---|
+| C1 | Shared Lambda utils | `infra/lambda/shared/` | PENDING | boto3 helpers for Bedrock, Connect, SNS, SQS, OpenSearch |
+| C2 | PCA Lambda handler | `infra/lambda/pca/handler.py` | PENDING | Calls Bedrock Claude for C_p classification, XGBoost for R_p |
+| C3 | COA Lambda handler | `infra/lambda/coa/handler.py` | PENDING | Calls Connect (IVR/SMS/callback), publishes result to EventBridge |
+| C4 | PSA Lambda handler | `infra/lambda/psa/handler.py` | PENDING | Queries OpenSearch for unconfirmed slots, escalates to RRA |
+| C5 | RRA Lambda handler | `infra/lambda/rra/handler.py` | PENDING | Queries waitlist from HealthLake, triggers COA for top candidate |
+| C6 | ACA Lambda handler | `infra/lambda/aca/handler.py` | PENDING | Writes immutable audit to OpenSearch with ILM |
+| C7 | Lambda requirements.txt | `infra/lambda/*/requirements.txt` | PENDING | boto3, xgboost (PCA only), requests |
+
+### Phase D: Spring Boot AWS Integration
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| D1 | `application-aws-integration.yml` | PENDING | AWS profile config: SQS URLs, Step Functions ARN, S3 bucket, etc. |
+| D2 | `AwsConfigGenerator.java` | PENDING | Reads `.env.aws-integration`, generates `application-aws-integration.yml` |
+| D3 | SQS consumer for workflow events | PENDING | Replaces HTTP broker polling — polls SQS for Step Functions results |
+| D4 | SQS consumer for outreach results | PENDING | Receives per-patient action results, saves to `agentic_outreach_action` table |
+| D5 | SQS consumer for admin alerts | PENDING | Surfaces admin alerts in dashboard |
+| D6 | `AwsStepFunctionsEngineFacade` — real impl | PENDING | Currently stub — needs AWS SDK `StartExecution` call |
+| D7 | `npm run start:aws-integration` script | PENDING | Starts Spring Boot with `aws-integration` profile |
+
+### Phase E: Admin UI Updates for AWS
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| E1 | Workflow engine dropdown shows AWS Step Functions | PENDING | Already seeded — just needs real AWS engine registered |
+| E2 | Dataset ingest to S3 | PENDING | "Ingest to AWS S3" option with S3 bucket location pre-filled |
+| E3 | S3 dataset location radio buttons | PENDING | "Create new folder" or "Reuse existing pre-defined folder" |
+| E4 | Workflow runs: show AWS execution link | PENDING | Link to AWS Step Functions console for the execution |
+| E5 | Real-time results from SQS | PENDING | UI polls for new agentic actions as they arrive from SQS |
+
+### Phase F: Destroy Actions
+
+| # | Task | GH Action | Status |
+|---|---|---|---|
+| F1 | Destroy Connect | `AWS-010-Destroy-Connect.yml` | PENDING |
+| F2 | Destroy Step Functions | `AWS-009-Destroy-StepFunctions.yml` | PENDING |
+| F3 | Destroy Lambda Agents | `AWS-008-Destroy-Lambda-Agents.yml` | PENDING |
+| F4 | Destroy Bedrock Agent | `AWS-007-Destroy-Bedrock-Agent.yml` | PENDING |
+| F5 | Destroy OpenSearch | `AWS-006-Destroy-OpenSearch.yml` | PENDING |
+| F6 | Destroy EventBridge | `AWS-005-Destroy-EventBridge.yml` | PENDING |
+| F7 | Destroy SQS Queues | `AWS-004-Destroy-SQS-Queues.yml` | PENDING |
+| F8 | Destroy SNS Topics | `AWS-003-Destroy-SNS-Topics.yml` | PENDING |
+| F9 | Destroy S3 Bucket | `AWS-002-Destroy-S3-Bucket.yml` | PENDING |
+| F10 | Destroy-All wrapper | `AWS-099-Destroy-All.yml` | PENDING |
+
+### GitHub Secrets Required
+
+| Secret | Description | Example |
+|---|---|---|
+| `AWS_ACCESS_KEY_ID` | IAM access key | AKIA... |
+| `AWS_SECRET_ACCESS_KEY` | IAM secret key | ... |
+| `AWS_REGION` | Deployment region | us-east-1 |
+| `AWS_VPC_ID` | VPC for Connect/OpenSearch | vpc-0abc... |
+| `AWS_ACCOUNT_ID` | For ARN construction | 123456789012 |
+
+### Key Design Decisions
+
+1. **Python Lambda, NOT Java** — cold start <1s vs 5-10s. Real-time patient outreach needs speed.
+2. **SQS for laptop→AWS integration** — Spring Boot polls SQS, works from localhost without VPN/ngrok.
+3. **Airflow dispatches to Step Functions** — Airflow DAG 1 (batch) iterates CSV from S3, triggers Step Functions per patient. Step Functions replaces Airflow DAG 2.
+4. **Step Functions → Lambda → Bedrock/Connect** — each step invokes a Lambda, Lambda calls Bedrock for reasoning or Connect for outreach.
+5. **EventBridge routes results to SQS** — Lambda publishes to EventBridge, rules route to SQS queues, Spring Boot polls and saves to DB.
+6. **`.env.aws-integration` generated by GH Action** — git-ignored, contains all ARNs/URLs. Spring Boot reads via `application-aws-integration.yml`.
+7. **Guard logic in PCA Lambda** — before outreach, PCA queries latest patient signals (check-in, SMS response, provider events). If patient confirmed/arriving → SKIP outreach.
