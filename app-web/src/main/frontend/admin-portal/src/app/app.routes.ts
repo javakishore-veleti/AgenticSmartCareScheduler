@@ -16,6 +16,7 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { WorkflowEnginesComponent } from './pages/workflow-engines/workflow-engines.component';
 import { WorkflowDefinitionsComponent } from './pages/workflow-definitions/workflow-definitions.component';
 import { WorkflowRunsComponent } from './pages/workflow-runs/workflow-runs.component';
+import { WorkflowRunDetailComponent } from './pages/workflow-run-detail/workflow-run-detail.component';
 import { SystemSetupComponent } from './pages/system-setup/system-setup.component';
 
 export const routes: Routes = [
@@ -34,6 +35,7 @@ export const routes: Routes = [
   { path: 'workflow-engines', component: WorkflowEnginesComponent },
   { path: 'workflow-definitions', component: WorkflowDefinitionsComponent },
   { path: 'workflow-runs', component: WorkflowRunsComponent },
+  { path: 'workflow-runs/:id', component: WorkflowRunDetailComponent },
   { path: 'system-setup', component: SystemSetupComponent },
   { path: 'audit', component: AuditComponent },
   { path: 'settings', component: SettingsComponent },

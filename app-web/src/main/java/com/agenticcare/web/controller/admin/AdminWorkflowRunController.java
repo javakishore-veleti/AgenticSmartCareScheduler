@@ -1,13 +1,21 @@
 package com.agenticcare.web.controller.admin;
 
 import com.agenticcare.domain.admin.service.WorkflowRunService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -66,5 +74,46 @@ public class AdminWorkflowRunController {
         return ResponseEntity.ok(service.updateStatus(id,
                 req.get("status"), req.get("externalRunId"),
                 req.get("resultPath"), req.get("errorMessage")));
+    }
+
+    @GetMapping("/{id}/results")
+    @Operation(summary = "Get workflow run results JSON")
+    public ResponseEntity<?> getResults(@PathVariable Long id) {
+        log.info(">>> GET /workflow-runs/{}/results called", id);
+        Path outputDir = Path.of(System.getProperty("user.home"),
+                "runtime_data", "workflow_output", "run_" + id);
+        Path resultsFile = outputDir.resolve("results.json");
+        if (!Files.exists(resultsFile)) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            String json = Files.readString(resultsFile);
+            ObjectMapper mapper = new ObjectMapper();
+            Object parsed = mapper.readValue(json, Object.class);
+            return ResponseEntity.ok(parsed);
+        } catch (Exception e) {
+            log.error("Failed to read results for run {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/chart/{filename}")
+    @Operation(summary = "Serve chart image from workflow run output directory")
+    public ResponseEntity<Resource> getChart(@PathVariable Long id, @PathVariable String filename) {
+        log.info(">>> GET /workflow-runs/{}/chart/{} called", id, filename);
+        // Sanitize filename to prevent path traversal
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            return ResponseEntity.badRequest().build();
+        }
+        Path outputDir = Path.of(System.getProperty("user.home"),
+                "runtime_data", "workflow_output", "run_" + id);
+        File chartFile = outputDir.resolve(filename).toFile();
+        if (!chartFile.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = new FileSystemResource(chartFile);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
+                .body(resource);
     }
 }

@@ -113,7 +113,9 @@ import { HttpClient } from '@angular/common/http';
         </thead>
         <tbody>
           <tr *ngFor="let r of runs">
-            <td class="fw-semibold">#{{ r.id }}</td>
+            <td class="fw-semibold">
+              <a [routerLink]="['/workflow-runs', r.id]" class="text-decoration-none" style="color: #ea580c;">#{{ r.id }}</a>
+            </td>
             <td>
               <span class="fw-semibold">{{ r.workflowDisplayName }}</span>
               <br><code class="small text-muted">{{ r.workflowKey }}</code>
