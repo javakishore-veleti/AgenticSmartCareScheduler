@@ -103,8 +103,80 @@ import { HttpClient } from '@angular/common/http';
         </div>
 
         <div *ngIf="!resultsLoading && results">
-          <!-- Accordion: Summary -->
           <div class="accordion mb-3" id="accordionResults">
+
+            <!-- Accordion: Problem & Approach -->
+            <div class="accordion-item" *ngIf="results.narrative">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNarr">
+                  <i class="bi bi-lightbulb me-2" style="color: #d97706;"></i>
+                  <strong>Problem, Approach & Value</strong>
+                </button>
+              </h2>
+              <div id="collapseNarr" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="mb-3" *ngIf="results.narrative.problem_statement">
+                    <h6 class="fw-bold" style="color: #dc2626;"><i class="bi bi-exclamation-circle me-1"></i>Problem</h6>
+                    <p class="mb-0">{{ results.narrative.problem_statement }}</p>
+                  </div>
+                  <div class="mb-3" *ngIf="results.narrative.what_agents_did">
+                    <h6 class="fw-bold" style="color: #4f46e5;"><i class="bi bi-robot me-1"></i>What the Agents Did</h6>
+                    <p class="mb-0">{{ results.narrative.what_agents_did }}</p>
+                  </div>
+                  <div class="mb-3" *ngIf="results.narrative.key_finding">
+                    <h6 class="fw-bold" style="color: #ea580c;"><i class="bi bi-search me-1"></i>Key Finding</h6>
+                    <p class="mb-0">{{ results.narrative.key_finding }}</p>
+                  </div>
+                  <div class="mb-3" *ngIf="results.narrative.value_proposition">
+                    <h6 class="fw-bold" style="color: #059669;"><i class="bi bi-graph-up-arrow me-1"></i>Value Proposition</h6>
+                    <p class="mb-0">{{ results.narrative.value_proposition }}</p>
+                  </div>
+                  <div *ngIf="results.narrative.clinical_impact">
+                    <h6 class="fw-bold" style="color: #7c3aed;"><i class="bi bi-heart-pulse me-1"></i>Clinical Impact</h6>
+                    <p class="mb-0">{{ results.narrative.clinical_impact }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accordion: Input Dataset -->
+            <div class="accordion-item" *ngIf="results.input_dataset">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDs">
+                  <i class="bi bi-database me-2" style="color: #7c3aed;"></i>
+                  <strong>Input Dataset</strong>
+                  <span class="badge ms-2" style="background: #7c3aed22; color: #7c3aed;">{{ results.input_dataset.source }}</span>
+                </button>
+              </h2>
+              <div id="collapseDs" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                  <div class="row g-3">
+                    <div class="col-md-3 text-center">
+                      <div class="fs-3 fw-bold" style="color: #4f46e5;">{{ results.input_dataset.records | number }}</div>
+                      <small class="text-muted">Records</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                      <div class="fs-3 fw-bold" style="color: #dc2626;">{{ results.input_dataset.no_show_count | number }}</div>
+                      <small class="text-muted">No-Shows</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                      <div class="fs-3 fw-bold" style="color: #059669;">{{ results.input_dataset.show_count | number }}</div>
+                      <small class="text-muted">Shows</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                      <div class="fs-3 fw-bold" style="color: #ea580c;">{{ results.no_show_rate }}%</div>
+                      <small class="text-muted">No-Show Rate</small>
+                    </div>
+                  </div>
+                  <div class="mt-3 small text-muted">
+                    <strong>Features:</strong> {{ results.input_dataset.features_used }}<br>
+                    <strong>Target:</strong> {{ results.input_dataset.target }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accordion: Summary -->
             <div class="accordion-item">
               <h2 class="accordion-header">
                 <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSum">
