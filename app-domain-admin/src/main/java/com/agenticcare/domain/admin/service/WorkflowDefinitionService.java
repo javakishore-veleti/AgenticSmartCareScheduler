@@ -79,12 +79,12 @@ public class WorkflowDefinitionService {
                 "Spring AI ChatClient, Bedrock Claude, @Tool for FHIR schedule queries",
                 "VII. Results");
 
-        seedOne("realtime_outreach_simulation", "Real-Time Outreach Simulation",
-                "Simulates live agent orchestration on individual patient records — processes patients one-by-one "
-                + "showing PCA context assessment, COA channel decision, outreach execution, and patient response. "
-                + "Uses Airflow AI SDK (@task.agent, @task.llm_branch) with Bedrock Claude for real-time reasoning. "
-                + "Outputs an action log: contacted, confirmed, rescheduled, escalated, or flagged for admin follow-up.",
-                "PCA \u2192 COA \u2192 Admin Escalation (Full Agentic Pipeline)",
+        seedOne("realtime_outreach_batch", "Real-Time Outreach Simulation",
+                "Two-DAG agentic pipeline: DAG 1 (Batch) reads dataset and dispatches each patient async to "
+                + "DAG 2 (Agent). DAG 2 runs PCA→COA with LLM reasoning per patient — assesses context, "
+                + "selects channel, executes outreach, interprets response. Escalates to admin when needed. "
+                + "30 agent instances run in parallel, simulating real-time urgency.",
+                "PCA \u2192 COA \u2192 Admin Escalation (Agentic AI Pipeline)",
                 "Bedrock Agents, Connect, SNS, EventBridge, Lambda",
                 "Airflow AI SDK, @task.agent, @task.llm_branch, Bedrock Claude, Spring AI @Tool",
                 "V. Methodology, VII. Results");
