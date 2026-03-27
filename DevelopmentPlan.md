@@ -238,6 +238,31 @@ Each workflow definition declares an **output schema** that tells the UI how to 
   - Accordion 4: "Patient-Level Results" — paginated table (patientId, C_p, channel, outcome)
   - Accordion 5: "Execution Log" — log viewer (timestamped agent actions)
 
+### API Namespace Convention
+
+| Path | Purpose | Who calls it |
+|---|---|---|
+| `/api/admin/v1/...` | Admin portal BFF | Admin Angular UI |
+| `/api/customer/v1/...` | Customer/patient BFF | Customer Angular UI, SMS deep-links |
+| `/api/provider/v1/...` | Provider BFF | Provider mobile app |
+| `/api/agents/admin/v1/...` | Agents → admin domain | Airflow DAGs (workflow status updates) |
+| `/api/agents/customer/v1/...` | Agents → customer domain | Airflow DAGs (outreach action records) |
+
+### Simulation Framing (for Paper)
+
+Each Kaggle appointment record is treated as an incoming event — as if triggered by a patient booking or provider scheduling system. The originating mechanism (mobile app, EHR, provider portal) is outside paper scope. The paper focuses on what happens AFTER the event arrives: PCA assesses, COA decides, system acts.
+
+**Patient signal APIs** (implemented):
+- `GET /api/customer/v1/appointment-signals/respond?p={patientId}&a={appointmentId}&r={response}` — SMS deep-link click (on_my_way, late, cancel)
+- `POST /api/provider/v1/appointment-signals/patient-arrived` — provider marks arrival
+- `POST /api/provider/v1/appointment-signals/patient-noshow` — provider marks no-show
+- `POST /api/provider/v1/appointment-signals/open-slot` — provider releases slot
+
+**PCA guard logic** (before outreach):
+- Check signals: if PATIENT_ON_MY_WAY or PATIENT_CONFIRMED or PROVIDER_PATIENT_ARRIVED → SKIP outreach
+- If PATIENT_CANCEL → release slot to RRA agent
+- If no signal + high risk → PROCEED with outreach
+
 ### Other Backlog Items
 - Agent Java implementations (PCA, COA, RRA, PSA, ACA)
 - AWS CloudFormation templates
