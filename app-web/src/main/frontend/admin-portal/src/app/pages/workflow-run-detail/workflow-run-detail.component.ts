@@ -303,6 +303,132 @@ import { HttpClient } from '@angular/common/http';
                 </div>
               </div>
             </div>
+            <!-- Accordion: Action Summary (realtime simulation) -->
+            <div class="accordion-item" *ngIf="results.action_summary">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseActions">
+                  <i class="bi bi-check2-all me-2" style="color: #059669;"></i>
+                  <strong>Outreach Actions</strong>
+                  <span class="badge ms-2" style="background: #d1fae5; color: #059669;">{{ results.action_summary.total_patients_contacted }} patients</span>
+                </button>
+              </h2>
+              <div id="collapseActions" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="row g-3 text-center">
+                    <div class="col-md-2">
+                      <div class="fs-3 fw-bold" style="color: #059669;">{{ results.action_summary.confirmed }}</div>
+                      <small class="text-muted">Confirmed</small>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="fs-3 fw-bold" style="color: #4f46e5;">{{ results.action_summary.rescheduled }}</div>
+                      <small class="text-muted">Rescheduled</small>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="fs-3 fw-bold" style="color: #d97706;">{{ results.action_summary.no_answer }}</div>
+                      <small class="text-muted">No Answer</small>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="fs-3 fw-bold" style="color: #dc2626;">{{ results.action_summary.cancelled }}</div>
+                      <small class="text-muted">Cancelled</small>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="fs-3 fw-bold" style="color: #059669;">{{ results.action_summary.confirmation_rate }}%</div>
+                      <small class="text-muted">Confirm Rate</small>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="fs-3 fw-bold" style="color: #ea580c;">{{ results.action_summary.admin_alerts_generated }}</div>
+                      <small class="text-muted">Admin Alerts</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accordion: Admin Alerts -->
+            <div class="accordion-item" *ngIf="results.admin_alerts && results.admin_alerts.length > 0">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAlerts">
+                  <i class="bi bi-bell me-2" style="color: #dc2626;"></i>
+                  <strong>Admin Alerts — Human-in-the-Loop</strong>
+                  <span class="badge ms-2" style="background: #fee2e2; color: #dc2626;">{{ results.admin_alerts.length }} alerts</span>
+                </button>
+              </h2>
+              <div id="collapseAlerts" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle small">
+                      <thead>
+                        <tr style="color: #dc2626;">
+                          <th>Severity</th><th>Patient</th><th>Alert</th><th>Recommended Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let a of results.admin_alerts">
+                          <td>
+                            <span class="badge" [style.background]="a.severity === 'HIGH' ? '#fee2e2' : '#fef3c7'"
+                                  [style.color]="a.severity === 'HIGH' ? '#dc2626' : '#d97706'">{{ a.severity }}</span>
+                          </td>
+                          <td class="fw-semibold">{{ a.patient_name }} ({{ a.patient_id }})</td>
+                          <td>{{ a.reason }}</td>
+                          <td class="text-muted">{{ a.recommended_action }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accordion: Action Log (per-patient details) -->
+            <div class="accordion-item" *ngIf="results.action_log && results.action_log.length > 0">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLog">
+                  <i class="bi bi-journal-text me-2" style="color: #4f46e5;"></i>
+                  <strong>Per-Patient Agent Decision Log</strong>
+                  <span class="badge ms-2" style="background: #e0e7ff; color: #4f46e5;">{{ results.action_log.length }} patients</span>
+                </button>
+              </h2>
+              <div id="collapseLog" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                  <div *ngFor="let p of pagedLog" class="card mb-2" [style.border-left]="'3px solid ' + getChannelColor(p.coa_channel)">
+                    <div class="card-body py-2">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold">{{ p.patient_name }} <small class="text-muted">({{ p.patient_id }})</small></span>
+                        <div>
+                          <span class="badge me-1" [style.background]="getContextColor(p.pca_context_state) + '22'"
+                                [style.color]="getContextColor(p.pca_context_state)">{{ p.pca_context_state }}</span>
+                          <span class="badge me-1" [style.background]="getChannelColor(p.coa_channel) + '22'"
+                                [style.color]="getChannelColor(p.coa_channel)">{{ p.coa_channel_label }}</span>
+                          <span class="badge"
+                                [style.background]="getOutcomeColor(p.patient_response) + '22'"
+                                [style.color]="getOutcomeColor(p.patient_response)">{{ p.patient_response }}</span>
+                        </div>
+                      </div>
+                      <div class="small text-muted">
+                        <strong>PCA:</strong> {{ p.pca_reasoning }}<br>
+                        <strong>COA:</strong> {{ p.coa_reasoning }}<br>
+                        <strong>Action:</strong> {{ p.action_taken }}
+                      </div>
+                    </div>
+                  </div>
+                  <nav *ngIf="logPages > 1" class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-center">
+                      <li class="page-item" [class.disabled]="logPage === 1">
+                        <a class="page-link" (click)="setLogPage(logPage - 1)" style="color: #4f46e5;">Prev</a>
+                      </li>
+                      <li class="page-item" *ngFor="let p of logPageArr" [class.active]="p === logPage">
+                        <a class="page-link" (click)="setLogPage(p)"
+                           [style.background]="p === logPage ? '#4f46e5' : ''" [style.color]="p === logPage ? 'white' : '#4f46e5'">{{ p }}</a>
+                      </li>
+                      <li class="page-item" [class.disabled]="logPage === logPages">
+                        <a class="page-link" (click)="setLogPage(logPage + 1)" style="color: #4f46e5;">Next</a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -318,6 +444,11 @@ export class WorkflowRunDetailComponent implements OnInit {
   contextStates: any[] = [];
   channels: any[] = [];
   chartUrl = '';
+  pagedLog: any[] = [];
+  logPage = 1;
+  logPages = 1;
+  logPageArr: number[] = [];
+  private logPageSize = 10;
 
   private baseUrl = window.location.origin + '/smart-care/api/admin/v1/workflow-runs';
   private runId!: string;
@@ -350,6 +481,11 @@ export class WorkflowRunDetailComponent implements OnInit {
         this.results = data;
         this.buildContextStates(data);
         this.buildChannels(data);
+        if (data.action_log) {
+          this.logPages = Math.max(1, Math.ceil(data.action_log.length / this.logPageSize));
+          this.logPageArr = Array.from({ length: this.logPages }, (_, i) => i + 1);
+          this.setLogPage(1);
+        }
         this.resultsLoading = false;
         this.cdr.detectChanges();
       },
@@ -387,6 +523,26 @@ export class WorkflowRunDetailComponent implements OnInit {
       count: dist[k]?.count || 0,
       percentage: dist[k]?.percentage || 0
     }));
+  }
+
+  setLogPage(page: number) {
+    if (page < 1 || page > this.logPages) return;
+    this.logPage = page;
+    const start = (page - 1) * this.logPageSize;
+    this.pagedLog = (this.results?.action_log || []).slice(start, start + this.logPageSize);
+    this.cdr.detectChanges();
+  }
+
+  getContextColor(state: string): string {
+    return { REACHABLE_MOBILE: '#4f46e5', REACHABLE_STATIONARY: '#16a34a', UNREACHABLE: '#ea580c' }[state] || '#6b7280';
+  }
+
+  getChannelColor(channel: string): string {
+    return { VOICE_IVR: '#4f46e5', SMS_DEEPLINK: '#16a34a', CALLBACK: '#ea580c' }[channel] || '#6b7280';
+  }
+
+  getOutcomeColor(outcome: string): string {
+    return { confirmed: '#059669', rescheduled: '#4f46e5', no_answer: '#d97706', cancelled: '#dc2626' }[outcome] || '#6b7280';
   }
 
   statusColor(status: string) {
