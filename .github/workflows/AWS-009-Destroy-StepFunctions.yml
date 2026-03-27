@@ -1,0 +1,17 @@
+name: "AWS-009: Destroy Step Functions"
+on:
+  workflow_dispatch:
+  workflow_call:
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      - name: Destroy Stack
+        run: |
+          aws cloudformation delete-stack --stack-name "smartcare-step-functions"
+          aws cloudformation wait stack-delete-complete --stack-name "smartcare-step-functions" || true

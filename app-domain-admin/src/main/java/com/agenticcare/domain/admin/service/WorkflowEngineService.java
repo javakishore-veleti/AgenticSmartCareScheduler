@@ -60,6 +60,17 @@ public class WorkflowEngineService {
             repo.save(engine);
             log.info("Seeded default workflow engine: local-airflow");
         }
+        if (repo.findByEngineName("aws-step-functions").isEmpty()) {
+            WorkflowEngineMasterEntity engine = new WorkflowEngineMasterEntity();
+            engine.setEngineName("aws-step-functions");
+            engine.setEngineType("AWS_STEP_FUNCTIONS");
+            engine.setBaseUrl("");
+            engine.setAuthType("IAM");
+            engine.setDescription("AWS Step Functions state machine for PCA→COA pipeline. Requires aws-integration profile.");
+            engine.setStatus("ACTIVE");
+            repo.save(engine);
+            log.info("Seeded default workflow engine: aws-step-functions");
+        }
     }
 
     public void delete(Long id) {

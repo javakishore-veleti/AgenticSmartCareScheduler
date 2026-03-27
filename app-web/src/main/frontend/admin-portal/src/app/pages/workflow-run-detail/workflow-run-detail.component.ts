@@ -32,10 +32,21 @@ import { HttpClient } from '@angular/common/http';
                   [style.color]="statusColor(run.runStatus).fg">
               {{ run.runStatus }}
             </span>
-            <a [href]="'http://localhost:8082'" target="_blank" class="badge text-decoration-none fs-6"
+            <a *ngIf="run.engineType === 'AIRFLOW'"
+               [href]="'http://localhost:8082'" target="_blank" class="badge text-decoration-none fs-6"
                style="background: #f0fdf4; color: #059669; cursor: pointer;">
               <i class="bi bi-box-arrow-up-right me-1"></i>{{ run.engineName }} ({{ run.engineType }})
             </a>
+            <a *ngIf="run.engineType === 'AWS_STEP_FUNCTIONS' && run.externalRunId && run.externalRunId.startsWith('arn:')"
+               [href]="'https://console.aws.amazon.com/states/home?region=us-east-1#/executions/details/' + run.externalRunId"
+               target="_blank" class="badge text-decoration-none fs-6"
+               style="background: #fff7ed; color: #c2410c; cursor: pointer;">
+              <i class="bi bi-box-arrow-up-right me-1"></i>{{ run.engineName }} ({{ run.engineType }})
+            </a>
+            <span *ngIf="run.engineType !== 'AIRFLOW' && !(run.engineType === 'AWS_STEP_FUNCTIONS' && run.externalRunId && run.externalRunId.startsWith('arn:'))"
+                  class="badge fs-6" style="background: #f0fdf4; color: #059669;">
+              {{ run.engineName }} ({{ run.engineType }})
+            </span>
             <span *ngIf="run.externalRunId" class="badge" style="background: #e0e7ff; color: #4f46e5;">
               External: {{ run.externalRunId }}
             </span>
