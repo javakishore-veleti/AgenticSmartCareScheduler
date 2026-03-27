@@ -1,0 +1,51 @@
+name: "AWS-007: Create Lambda Agents"
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Which agent to deploy (all, pca, coa, psa, rra, aca)"
+        required: true
+        default: "all"
+        type: choice
+        options: [all, pca, coa, psa, rra, aca]
+  workflow_call:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Package Lambda functions
+        run: |
+          cd infra/lambda
+          for agent in pca coa psa rra aca; do
+            if [ "${{ inputs.agent || 'all' }}" = "all" ] || [ "${{ inputs.agent }}" = "$agent" ]; then
+              echo "Packaging $agent..."
+              cd $agent
+              pip install -r requirements.txt -t package/
+              cp *.py package/
+              cd package && zip -r ../../${agent}-lambda.zip . && cd ..
+              rm -rf package
+              cd ..
+            fi
+          done
+
+      - name: Deploy Lambda Functions
+        run: |
+          AGENT="${{ inputs.agent || 'all' }}"
+          aws cloudformation deploy \
+            --stack-name "smartcare-lambda-agents" \
+            --template-file infra/cfn-lambda-agents.yaml \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides AgentToDeploy=$AGENT \
+            --no-fail-on-empty-changeset

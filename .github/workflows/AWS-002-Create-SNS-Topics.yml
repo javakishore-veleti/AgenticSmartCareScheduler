@@ -1,0 +1,39 @@
+name: "AWS-002: Create SNS Topics"
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      appointment_event_topic_arn:
+        value: ${{ jobs.create.outputs.appointment_event_topic_arn }}
+      outreach_result_topic_arn:
+        value: ${{ jobs.create.outputs.outreach_result_topic_arn }}
+      admin_alert_topic_arn:
+        value: ${{ jobs.create.outputs.admin_alert_topic_arn }}
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    outputs:
+      appointment_event_topic_arn: ${{ steps.deploy.outputs.appointment_event_topic_arn }}
+      outreach_result_topic_arn: ${{ steps.deploy.outputs.outreach_result_topic_arn }}
+      admin_alert_topic_arn: ${{ steps.deploy.outputs.admin_alert_topic_arn }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Deploy SNS Topics
+        id: deploy
+        run: |
+          STACK_NAME="smartcare-sns-topics"
+          aws cloudformation deploy \
+            --stack-name "$STACK_NAME" \
+            --template-file infra/cfn-sns-topics.yaml \
+            --no-fail-on-empty-changeset
+
+          echo "appointment_event_topic_arn=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`AppointmentEventTopicArn`].OutputValue' --output text)" >> $GITHUB_OUTPUT
+          echo "outreach_result_topic_arn=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`OutreachResultTopicArn`].OutputValue' --output text)" >> $GITHUB_OUTPUT
+          echo "admin_alert_topic_arn=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`AdminAlertTopicArn`].OutputValue' --output text)" >> $GITHUB_OUTPUT

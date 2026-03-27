@@ -263,10 +263,166 @@ Each Kaggle appointment record is treated as an incoming event — as if trigger
 - If PATIENT_CANCEL → release slot to RRA agent
 - If no signal + high risk → PROCEED with outreach
 
+---
+
+## AWS Deployment Architecture (Design Notes)
+
+### Dual Environment: Local Airflow vs AWS
+
+The system supports two runtime environments for the real-time outreach workflow:
+
+| Component | Local (Airflow) | AWS (Step Functions) |
+|---|---|---|
+| Orchestrator | Apache Airflow DAGs | AWS Step Functions state machine |
+| Agent compute | Python tasks in Airflow | AWS Lambda functions |
+| LLM reasoning | Simulated (placeholder) | Amazon Bedrock (Claude) |
+| Communication | Simulated responses | Amazon Connect (IVR, SMS, Callback) |
+| Event bus | Message Broker (H2/Postgres) | Amazon EventBridge + SQS |
+| Dataset storage | Local filesystem | Amazon S3 |
+| Spring Boot integration | Direct HTTP (localhost) | SQS polling (Spring Boot polls AWS queues) |
+
+### Admin UI: Workflow Engine Selection
+
+When user selects "Real-Time Outreach Simulation" and picks **AWS Step Functions** as the engine (instead of local Airflow):
+- UI shows S3 dataset location (pre-filled from GH Actions config)
+- Radio button: "Create new folder in bucket" or "Reuse existing pre-defined folder"
+- On submit: Spring Boot triggers AWS Step Functions execution (not Airflow)
+
+### AWS Deployment Flow
+
+**Step 1: GitHub Actions create AWS infrastructure**
+GH Actions naming: `AWS-001-`, `AWS-002-`, etc. in logical build-up order.
+
+```
+AWS-001-Validate-VPC.yml           — validates VPC ID from secrets
+AWS-002-Create-S3-Bucket.yml       — dataset storage bucket + folders
+AWS-003-Create-SNS-Topics.yml      — appointment events, outreach results, admin alerts
+AWS-004-Create-SQS-Queues.yml      — queues for Spring Boot to poll from laptop
+AWS-005-Create-EventBridge.yml     — event bus + rules → route to SQS + Lambda
+AWS-006-Create-OpenSearch.yml      — digital twin DT(t) with 4 indices
+AWS-007-Create-Bedrock-Agent.yml   — PCA agent with Claude foundation model
+AWS-008-Create-Lambda-Agents.yml   — 5 Lambda functions (PCA, COA, PSA, RRA, ACA)
+AWS-009-Create-StepFunctions.yml   — orchestrator state machine (PCA→COA→PSA→RRA→ACA)
+AWS-010-Create-Connect.yml         — Connect instance + contact flows (IVR, SMS, callback)
+AWS-011-Create-HealthLake.yml      — FHIR R4 appointment data
+AWS-012-Generate-Env-File.yml      — generates .env.aws-integration with all ARNs/URLs
+AWS-099-Deploy-All.yml             — wrapper with checkboxes for selective deployment
+AWS-099-Destroy-All.yml            — teardown wrapper with checkboxes
+```
+
+Matching destroy actions for each create:
+```
+AWS-001-Destroy-... through AWS-011-Destroy-...
+```
+
+**Step 2: Generate local config file**
+`AWS-012-Generate-Env-File.yml` outputs `.env.aws-integration` (git-ignored) containing:
+- All SNS topic ARNs, SQS queue URLs, S3 bucket name + dataset prefix
+- OpenSearch endpoint, Bedrock agent ID, Step Functions state machine ARN
+- Connect instance ID, Lambda function ARNs
+
+**Step 3: Start Spring Boot with AWS profile**
+```bash
+# One-time: run mvn command to read .env.aws-integration and create application-aws-integration.yml
+mvn exec:java -Dexec.mainClass="com.agenticcare.config.AwsConfigGenerator"
+
+# Then start with AWS profile
+npm run start:aws-integration
+# → Spring Boot starts with spring.profiles.active=aws-integration
+# → Polls SQS queues for events from Step Functions/Lambda
+# → Can trigger Step Functions executions via AWS SDK
+```
+
+### Real-Time Outreach Flow on AWS
+
+```
+1. User clicks "Submit Run" in Admin UI
+   → selects "Real-Time Outreach Simulation"
+   → selects "AWS Step Functions" as engine
+   → selects S3 dataset location (pre-filled or new folder)
+   → clicks Submit
+
+2. Spring Boot (on laptop):
+   → WfEngineFacadeFactory.getFacade("AWS_STEP_FUNCTIONS")
+   → AwsStepFunctionsEngineFacade.triggerRun()
+   → AWS SDK: StartExecution(stateMachineArn, input={datasetS3Path, runId})
+
+3. AWS Step Functions orchestrates:
+   → Step 1: Lambda reads CSV from S3, iterates rows
+   → Step 2: For each patient, invokes PCA Lambda
+     → PCA Lambda calls Amazon Bedrock (Claude) for context reasoning
+     → Classifies C_p, assesses risk
+   → Step 3: Invokes COA Lambda
+     → COA Lambda calls Amazon Connect (place IVR call / send SMS / schedule callback)
+     → Records patient response
+   → Step 4: Publishes result to EventBridge
+     → EventBridge routes to SQS (for Spring Boot) + SNS (for notifications)
+
+4. Spring Boot (on laptop) polls SQS:
+   → Receives per-patient action results
+   → Saves to agentic_outreach_action DB table
+   → Updates workflow run status
+   → Admin UI shows results in real-time
+```
+
+### Apache Airflow's Role with AWS
+
+For the AWS environment, Airflow acts as the **batch dispatcher** (same as local):
+- Airflow reads dataset from S3 (instead of local filesystem)
+- For each patient, Airflow triggers AWS Step Functions (instead of agent DAG)
+- AWS Step Functions handles the per-patient agentic pipeline (Bedrock, Connect, Lambda)
+- Results flow back via SQS to Spring Boot
+
+This means:
+- Airflow DAG 1 (batch) dispatches to AWS Step Functions (not Airflow DAG 2)
+- AWS Step Functions replaces Airflow DAG 2 for per-patient agent execution
+- The agentic AI runs on AWS (Bedrock + Lambda), not in Airflow Python tasks
+
+### GitHub Secrets Required
+
+| Secret | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | IAM access key |
+| `AWS_SECRET_ACCESS_KEY` | IAM secret key |
+| `AWS_REGION` | e.g. us-east-1 |
+| `AWS_VPC_ID` | VPC for Connect/OpenSearch |
+| `AWS_ACCOUNT_ID` | For ARN construction |
+
+### Spring Boot AWS Integration Profile
+
+`application-aws-integration.yml` (generated, git-ignored):
+```yaml
+smartcare:
+  aws:
+    region: us-east-1
+    s3:
+      dataset-bucket: smartcare-datasets-{account-id}
+      dataset-prefix: datasets/
+    sqs:
+      workflow-events-queue-url: https://sqs.us-east-1.amazonaws.com/...
+      outreach-results-queue-url: https://sqs.us-east-1.amazonaws.com/...
+      admin-alerts-queue-url: https://sqs.us-east-1.amazonaws.com/...
+    step-functions:
+      state-machine-arn: arn:aws:states:us-east-1:...:stateMachine:smartcare-outreach
+    connect:
+      instance-id: ...
+    bedrock:
+      agent-id: ...
+    opensearch:
+      endpoint: https://...es.amazonaws.com
+```
+
+### npm Scripts for AWS Integration
+
+```json
+"start:aws-integration": "SPRING_PROFILES_ACTIVE=aws-integration mvn -pl app-web spring-boot:run"
+"aws:generate-config": "mvn exec:java -Dexec.mainClass=com.agenticcare.config.AwsConfigGenerator"
+```
+
 ### Other Backlog Items
-- Agent Java implementations (PCA, COA, RRA, PSA, ACA)
-- AWS CloudFormation templates
-- Deployment workflows (bootstrap-infra, deploy-agents, run-scenario, shutdown-infra)
+- Agent Java implementations (PCA, COA, RRA, PSA, ACA) in Lambda handler format
+- CloudFormation templates (infra/ folder)
+- Lambda function code (infra/lambda/pca/, coa/, etc.)
 - Admin portal stub pages (Agents, Scenarios, Analytics, Digital Twin, Audit Log)
-- Live scenario execution (3 outreach scenarios against deployed agents)
-- End-to-end AWS deployment (Lambda + Connect + SNS + OpenSearch)
+- Live scenario execution on AWS
+- AWS Connect contact flow definitions (IVR, SMS, callback)

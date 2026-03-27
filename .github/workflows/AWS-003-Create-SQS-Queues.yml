@@ -1,0 +1,39 @@
+name: "AWS-003: Create SQS Queues"
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      workflow_events_queue_url:
+        value: ${{ jobs.create.outputs.workflow_events_queue_url }}
+      outreach_results_queue_url:
+        value: ${{ jobs.create.outputs.outreach_results_queue_url }}
+      admin_alerts_queue_url:
+        value: ${{ jobs.create.outputs.admin_alerts_queue_url }}
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    outputs:
+      workflow_events_queue_url: ${{ steps.deploy.outputs.workflow_events_queue_url }}
+      outreach_results_queue_url: ${{ steps.deploy.outputs.outreach_results_queue_url }}
+      admin_alerts_queue_url: ${{ steps.deploy.outputs.admin_alerts_queue_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Deploy SQS Queues
+        id: deploy
+        run: |
+          STACK_NAME="smartcare-sqs-queues"
+          aws cloudformation deploy \
+            --stack-name "$STACK_NAME" \
+            --template-file infra/cfn-sqs-queues.yaml \
+            --no-fail-on-empty-changeset
+
+          echo "workflow_events_queue_url=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`WorkflowEventsQueueUrl`].OutputValue' --output text)" >> $GITHUB_OUTPUT
+          echo "outreach_results_queue_url=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`OutreachResultsQueueUrl`].OutputValue' --output text)" >> $GITHUB_OUTPUT
+          echo "admin_alerts_queue_url=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`AdminAlertsQueueUrl`].OutputValue' --output text)" >> $GITHUB_OUTPUT

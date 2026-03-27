@@ -31,6 +31,7 @@ Thumbs.db
 # Environment
 .env
 .env.local
+.env.aws-integration
 
 # Jupyter
 .ipynb_checkpoints/
