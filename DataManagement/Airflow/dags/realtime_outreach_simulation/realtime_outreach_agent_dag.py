@@ -306,8 +306,8 @@ def publish_action(**kwargs):
     # POST to Spring Boot API
     api_url = get_api_url()
     try:
-        agentic_url = api_url.replace("/admin/v1", "/agentic/v1")
-        resp = requests.post(f"{agentic_url}/outreach-actions", json={
+        agents_url = api_url.replace("/admin/v1", "/agents/customer/v1")
+        resp = requests.post(f"{agents_url}/outreach-actions", json={
             "actionKey": action_key,
             "workflowRunId": batch_run_id,
             "workflowEngineType": "AIRFLOW",

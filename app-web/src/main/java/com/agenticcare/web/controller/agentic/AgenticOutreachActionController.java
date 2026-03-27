@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/smart-care/api/agentic/v1/outreach-actions")
-@Tag(name = "Agentic - Outreach Actions", description = "Per-patient outreach action records from agentic AI agents")
+@RequestMapping("/smart-care/api/agents/customer/v1/outreach-actions")
+@Tag(name = "Agents - Customer Outreach", description = "Internal API for agents to record outreach actions on customer/patient records")
 public class AgenticOutreachActionController {
 
     private static final Logger log = LoggerFactory.getLogger(AgenticOutreachActionController.class);
@@ -28,7 +28,7 @@ public class AgenticOutreachActionController {
     @Operation(summary = "Record an agentic outreach action (called by agent DAG per patient)")
     public ResponseEntity<Map<String, Object>> recordAction(@RequestBody Map<String, Object> req) {
         String actionKey = (String) req.get("actionKey");
-        log.info(">>> POST /agentic/outreach-actions key={}", actionKey);
+        log.info(">>> POST /agents/customer/outreach-actions key={}", actionKey);
 
         if (actionKey != null && repo.findByActionKey(actionKey).isPresent()) {
             return ResponseEntity.ok(Map.of("status", "already_exists", "actionKey", actionKey));
@@ -56,14 +56,14 @@ public class AgenticOutreachActionController {
     @GetMapping("/by-run/{workflowRunId}")
     @Operation(summary = "Get all outreach actions for a workflow run")
     public ResponseEntity<List<AgenticOutreachActionEntity>> getByRun(@PathVariable Long workflowRunId) {
-        log.info(">>> GET /agentic/outreach-actions/by-run/{}", workflowRunId);
+        log.info(">>> GET /agents/customer/outreach-actions/by-run/{}", workflowRunId);
         return ResponseEntity.ok(repo.findByWorkflowRunIdOrderByCreatedAtDesc(workflowRunId));
     }
 
     @GetMapping("/by-patient/{patientId}")
     @Operation(summary = "Get all outreach actions for a patient")
     public ResponseEntity<List<AgenticOutreachActionEntity>> getByPatient(@PathVariable String patientId) {
-        log.info(">>> GET /agentic/outreach-actions/by-patient/{}", patientId);
+        log.info(">>> GET /agents/customer/outreach-actions/by-patient/{}", patientId);
         return ResponseEntity.ok(repo.findByPatientId(patientId));
     }
 }
