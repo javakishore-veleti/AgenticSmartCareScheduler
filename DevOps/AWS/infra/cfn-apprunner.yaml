@@ -137,8 +137,8 @@ Resources:
               - Name: AWS_REGION
                 Value: !Ref AWS::Region
       InstanceConfiguration:
-        Cpu: '0.25 vCPU'
-        Memory: '0.5 GB'
+        Cpu: '1024'
+        Memory: '2048'
         InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
       HealthCheckConfiguration:
         Protocol: HTTP
@@ -185,8 +185,8 @@ Resources:
               - Name: AWS_REGION
                 Value: !Ref AWS::Region
       InstanceConfiguration:
-        Cpu: '0.25 vCPU'
-        Memory: '0.5 GB'
+        Cpu: '1024'
+        Memory: '2048'
         InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
       HealthCheckConfiguration:
         Protocol: HTTP

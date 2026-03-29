@@ -62,7 +62,7 @@ Resources:
     Properties:
       DBInstanceIdentifier: !Sub smartcare-db-${Environment}
       Engine: postgres
-      EngineVersion: '16.4'
+      EngineVersion: '16'
       DBInstanceClass: !Ref DBInstanceClass
       AllocatedStorage: 20
       StorageType: gp3

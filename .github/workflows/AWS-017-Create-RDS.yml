@@ -28,6 +28,8 @@ jobs:
           fi
 
       - name: Deploy RDS
+        env:
+          RDS_PASSWORD: ${{ secrets.AGENTIC_SCS_RDS_MASTER_PASSWORD }}
         run: |
           aws cloudformation deploy \
             --stack-name "smartcare-rds" \
@@ -35,5 +37,4 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
             --parameter-overrides \
-              MasterUserPassword=${{ secrets.AGENTIC_SCS_RDS_MASTER_PASSWORD }} \
-            --tags Project=SmartCareScheduler Component=RDS
+              "MasterUserPassword=${RDS_PASSWORD}"
