@@ -6,10 +6,10 @@ on:
         description: "VPC source"
         type: choice
         required: true
-        default: "use_existing"
+        default: "create_new"
         options:
-          - use_existing
           - create_new
+          - use_existing
           - skip
       create_s3:
         description: "Create S3 Bucket"
