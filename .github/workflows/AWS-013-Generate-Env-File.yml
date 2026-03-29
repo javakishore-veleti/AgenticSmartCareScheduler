@@ -57,6 +57,17 @@ jobs:
           CLOUDWATCH_DASHBOARD=$(aws cloudformation describe-stacks --stack-name smartcare-cloudwatch --query 'Stacks[0].Outputs[?OutputKey==`DashboardUrl`].OutputValue' --output text 2>/dev/null || echo "NOT_DEPLOYED")
           CLOUDWATCH_ALARM_TOPIC=$(aws cloudformation describe-stacks --stack-name smartcare-cloudwatch --query 'Stacks[0].Outputs[?OutputKey==`AlarmTopicArn`].OutputValue' --output text 2>/dev/null || echo "NOT_DEPLOYED")
 
+          # RDS
+          RDS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name smartcare-rds --query 'Stacks[0].Outputs[?OutputKey==`RdsEndpoint`].OutputValue' --output text 2>/dev/null || echo "NOT_DEPLOYED")
+          RDS_PORT=$(aws cloudformation describe-stacks --stack-name smartcare-rds --query 'Stacks[0].Outputs[?OutputKey==`RdsPort`].OutputValue' --output text 2>/dev/null || echo "5432")
+
+          # ECR
+          ECR_APP_WEB=$(aws cloudformation describe-stacks --stack-name smartcare-ecr --query 'Stacks[0].Outputs[?OutputKey==`AppWebRepoUri`].OutputValue' --output text 2>/dev/null || echo "NOT_DEPLOYED")
+          ECR_APP_BROKER=$(aws cloudformation describe-stacks --stack-name smartcare-ecr --query 'Stacks[0].Outputs[?OutputKey==`AppMessageBrokerRepoUri`].OutputValue' --output text 2>/dev/null || echo "NOT_DEPLOYED")
+
+          # Container Service URL
+          CONTAINER_URL=$(aws cloudformation describe-stacks --stack-name smartcare-apprunner --query 'Stacks[0].Outputs[?OutputKey==`AppWebServiceUrl`].OutputValue' --output text 2>/dev/null || aws cloudformation describe-stacks --stack-name smartcare-ecs-fargate --query 'Stacks[0].Outputs[?OutputKey==`AlbDnsName`].OutputValue' --output text 2>/dev/null || aws cloudformation describe-stacks --stack-name smartcare-ecs-fargate-spot --query 'Stacks[0].Outputs[?OutputKey==`AlbDnsName`].OutputValue' --output text 2>/dev/null || echo "NOT_DEPLOYED")
+
           # Application Secrets (from GitHub Secrets — not queried from AWS)
           AES_ENCRYPTION_KEY=${{ secrets.AGENTIC_SCS_AES_ENCRYPTION_KEY }}
           ENCRYPTION_KEY=${{ secrets.AGENTIC_SCS_ENCRYPTION_KEY }}

@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - RDS PostgreSQL for microservices
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  MasterUsername:
+    Type: String
+    Default: smartcare
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+  DBInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+  MultiAZ:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+
+Conditions:
+  IsMultiAZ: !Equals [!Ref MultiAZ, 'true']
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: SmartCare RDS private subnets
+      SubnetIds:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: RDS
+
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow PostgreSQL from container security group
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: '10.0.0.0/16'
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: RDS
+
+  SmartCareDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub smartcare-db-${Environment}
+      Engine: postgres
+      EngineVersion: '16.4'
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: 20
+      StorageType: gp3
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RdsSecurityGroup
+      MultiAZ: !If [IsMultiAZ, true, false]
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      StorageEncrypted: true
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: RDS
+
+Outputs:
+  RdsEndpoint:
+    Value: !GetAtt SmartCareDB.Endpoint.Address
+    Export:
+      Name: !Sub smartcare-${Environment}-rds-endpoint
+  RdsPort:
+    Value: !GetAtt SmartCareDB.Endpoint.Port
+    Export:
+      Name: !Sub smartcare-${Environment}-rds-port
+  RdsSecurityGroupId:
+    Value: !Ref RdsSecurityGroup
+    Export:
+      Name: !Sub smartcare-${Environment}-rds-sg

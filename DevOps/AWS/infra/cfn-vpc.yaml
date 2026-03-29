@@ -192,3 +192,7 @@ Outputs:
     Value: !Ref PrivateSubnet2
     Export:
       Name: !Sub smartcare-${Environment}-private-subnet-2
+  PrivateRouteTableId:
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: !Sub smartcare-${Environment}-private-rt

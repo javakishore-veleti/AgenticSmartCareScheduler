@@ -36,9 +36,38 @@ on:
         type: boolean
         default: true
       create_cloudwatch:
-        description: "Create CloudWatch Monitoring (log groups, data protection, alarms, dashboard)"
+        description: "Create CloudWatch Monitoring"
         type: boolean
         default: true
+      # --- Container deployment ---
+      create_ecr:
+        description: "Create ECR Repositories"
+        type: boolean
+        default: true
+      create_nat_endpoints:
+        description: "Create NAT Gateway + VPC Endpoints (required for containers)"
+        type: boolean
+        default: true
+      create_rds:
+        description: "Create RDS PostgreSQL"
+        type: boolean
+        default: true
+      build_docker:
+        description: "Build & Push Docker Images"
+        type: boolean
+        default: true
+      deploy_containers:
+        description: "Deploy Containers"
+        type: boolean
+        default: true
+      container_target:
+        description: "Container deployment target"
+        type: choice
+        default: "apprunner"
+        options:
+          - apprunner
+          - ecs-fargate
+          - ecs-fargate-spot
       generate_env:
         description: "Generate .env file"
         type: boolean
@@ -62,7 +91,7 @@ on:
         default: false
 
 jobs:
-  # --- VPC (always runs unless skipped) ---
+  # --- VPC ---
   vpc:
     if: ${{ inputs.vpc_mode != 'skip' }}
     uses: ./.github/workflows/AWS-001-Validate-VPC.yml
@@ -70,7 +99,7 @@ jobs:
       vpc_mode: ${{ inputs.vpc_mode }}
     secrets: inherit
 
-  # --- Core services (fast, default on) ---
+  # --- Core messaging ---
   create-s3:
     needs: [vpc]
     if: ${{ always() && inputs.create_s3 }}
@@ -94,6 +123,7 @@ jobs:
     uses: ./.github/workflows/AWS-004-Create-EventBridge.yml
     secrets: inherit
 
+  # --- Lambda agents + orchestration ---
   create-lambda:
     needs: [create-sns, create-eventbridge]
     if: ${{ always() && inputs.create_lambda }}
@@ -112,7 +142,40 @@ jobs:
     uses: ./.github/workflows/AWS-012-Create-CloudWatch.yml
     secrets: inherit
 
-  # --- Slow / expensive services (default off) ---
+  # --- Container infrastructure ---
+  create-ecr:
+    needs: [vpc]
+    if: ${{ always() && inputs.create_ecr }}
+    uses: ./.github/workflows/AWS-014-Create-ECR.yml
+    secrets: inherit
+
+  create-nat-endpoints:
+    needs: [vpc]
+    if: ${{ always() && inputs.create_nat_endpoints }}
+    uses: ./.github/workflows/AWS-016-Create-NAT-VPC-Endpoints.yml
+    secrets: inherit
+
+  create-rds:
+    needs: [create-nat-endpoints]
+    if: ${{ always() && inputs.create_rds }}
+    uses: ./.github/workflows/AWS-017-Create-RDS.yml
+    secrets: inherit
+
+  build-docker:
+    needs: [create-ecr]
+    if: ${{ always() && inputs.build_docker }}
+    uses: ./.github/workflows/AWS-015-Build-Push-Docker.yml
+    secrets: inherit
+
+  deploy-containers:
+    needs: [create-rds, build-docker, create-sqs]
+    if: ${{ always() && inputs.deploy_containers }}
+    uses: ./.github/workflows/AWS-018-Deploy-Containers.yml
+    with:
+      container_target: ${{ inputs.container_target }}
+    secrets: inherit
+
+  # --- Slow / expensive (default off) ---
   create-opensearch:
     needs: [vpc]
     if: ${{ always() && inputs.create_opensearch }}
@@ -136,9 +199,9 @@ jobs:
     uses: ./.github/workflows/AWS-010-Create-HealthLake.yml
     secrets: inherit
 
-  # --- Generate env file (runs last, always) ---
+  # --- Generate env file (runs last) ---
   generate-env:
-    needs: [create-s3, create-sns, create-sqs, create-eventbridge, create-lambda, create-stepfunctions, create-cloudwatch, create-opensearch]
+    needs: [create-s3, create-sns, create-sqs, create-eventbridge, create-lambda, create-stepfunctions, create-cloudwatch, deploy-containers]
     if: ${{ always() && inputs.generate_env }}
     uses: ./.github/workflows/AWS-013-Generate-Env-File.yml
     secrets: inherit

@@ -1,0 +1,115 @@
+name: "AWS-018: Deploy Containers"
+on:
+  workflow_dispatch:
+    inputs:
+      container_target:
+        description: "Container platform to deploy"
+        required: true
+        default: "apprunner"
+        type: choice
+        options: [apprunner, ecs-fargate, ecs-fargate-spot]
+  workflow_call:
+    inputs:
+      container_target:
+        description: "Container platform to deploy"
+        type: string
+        default: "apprunner"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+
+      - name: Get ECR Image URIs
+        id: ecr
+        run: |
+          APP_WEB_URI=$(aws cloudformation describe-stacks --stack-name smartcare-ecr \
+            --query "Stacks[0].Outputs[?OutputKey=='AppWebRepoUri'].OutputValue" --output text)
+          BROKER_URI=$(aws cloudformation describe-stacks --stack-name smartcare-ecr \
+            --query "Stacks[0].Outputs[?OutputKey=='BrokerRepoUri'].OutputValue" --output text)
+          echo "app_web_uri=${APP_WEB_URI}:latest" >> "$GITHUB_OUTPUT"
+          echo "broker_uri=${BROKER_URI}:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Get RDS Endpoint
+        id: rds
+        run: |
+          RDS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name smartcare-rds \
+            --query "Stacks[0].Outputs[?OutputKey=='RdsEndpoint'].OutputValue" --output text)
+          echo "endpoint=$RDS_ENDPOINT" >> "$GITHUB_OUTPUT"
+
+      - name: Get SQS Queue URLs
+        id: sqs
+        run: |
+          SQS_WORKFLOW=$(aws cloudformation describe-stacks --stack-name smartcare-sqs-queues \
+            --query "Stacks[0].Outputs[?OutputKey=='WorkflowEventsQueueUrl'].OutputValue" --output text)
+          SQS_OUTREACH=$(aws cloudformation describe-stacks --stack-name smartcare-sqs-queues \
+            --query "Stacks[0].Outputs[?OutputKey=='OutreachResultsQueueUrl'].OutputValue" --output text)
+          SQS_ADMIN=$(aws cloudformation describe-stacks --stack-name smartcare-sqs-queues \
+            --query "Stacks[0].Outputs[?OutputKey=='AdminAlertsQueueUrl'].OutputValue" --output text)
+          echo "workflow_url=$SQS_WORKFLOW" >> "$GITHUB_OUTPUT"
+          echo "outreach_url=$SQS_OUTREACH" >> "$GITHUB_OUTPUT"
+          echo "admin_url=$SQS_ADMIN" >> "$GITHUB_OUTPUT"
+
+      - name: Get OpenSearch Endpoint
+        id: opensearch
+        run: |
+          OS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name smartcare-opensearch \
+            --query "Stacks[0].Outputs[?OutputKey=='OpenSearchEndpoint'].OutputValue" --output text 2>/dev/null || echo "")
+          echo "endpoint=$OS_ENDPOINT" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve stack name and template
+        id: target
+        run: |
+          TARGET="${{ inputs.container_target || 'apprunner' }}"
+          case "$TARGET" in
+            apprunner)
+              echo "stack=smartcare-apprunner" >> "$GITHUB_OUTPUT"
+              echo "template=DevOps/AWS/infra/cfn-apprunner.yaml" >> "$GITHUB_OUTPUT"
+              ;;
+            ecs-fargate)
+              echo "stack=smartcare-ecs-fargate" >> "$GITHUB_OUTPUT"
+              echo "template=DevOps/AWS/infra/cfn-ecs-fargate.yaml" >> "$GITHUB_OUTPUT"
+              ;;
+            ecs-fargate-spot)
+              echo "stack=smartcare-ecs-fargate-spot" >> "$GITHUB_OUTPUT"
+              echo "template=DevOps/AWS/infra/cfn-ecs-fargate-spot.yaml" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Clean up failed stack if exists
+        run: |
+          STACK="${{ steps.target.outputs.stack }}"
+          STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK" \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+          if [[ "$STATUS" == *FAILED* ]] || [[ "$STATUS" == *ROLLBACK_COMPLETE* ]]; then
+            echo "Stack in $STATUS state — deleting before re-deploy..."
+            aws cloudformation delete-stack --stack-name "$STACK"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK"
+            echo "Deleted."
+          else
+            echo "Stack status: $STATUS — proceeding with deploy."
+          fi
+
+      - name: Deploy Container Stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name "${{ steps.target.outputs.stack }}" \
+            --template-file "${{ steps.target.outputs.template }}" \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              AppWebImageUri=${{ steps.ecr.outputs.app_web_uri }} \
+              BrokerImageUri=${{ steps.ecr.outputs.broker_uri }} \
+              RdsEndpoint=${{ steps.rds.outputs.endpoint }} \
+              RdsPassword=${{ secrets.AGENTIC_SCS_RDS_MASTER_PASSWORD }} \
+              SqsWorkflowEventsUrl=${{ steps.sqs.outputs.workflow_url }} \
+              SqsOutreachResultsUrl=${{ steps.sqs.outputs.outreach_url }} \
+              SqsAdminAlertsUrl=${{ steps.sqs.outputs.admin_url }} \
+              OpenSearchEndpoint=${{ steps.opensearch.outputs.endpoint }} \
+            --tags Project=SmartCareScheduler Component=Containers Target=${{ inputs.container_target || 'apprunner' }}

@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - NAT Gateway + VPC Endpoints for private subnet internet access
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  NatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: NAT
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-public-subnet-1
+      Tags:
+        - Key: Name
+          Value: !Sub smartcare-nat-${Environment}
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: NAT
+
+  PrivateRouteToNat:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-private-rt
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGateway
+
+  # VPC Endpoint — S3 Gateway (free)
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-rt
+
+  # VPC Endpoint — ECR API (reduces NAT data costs for image pulls)
+  EcrApiEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+      SecurityGroupIds:
+        - !Ref VpcEndpointSG
+
+  # VPC Endpoint — ECR Docker (image layer pulls)
+  EcrDkrEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+      SecurityGroupIds:
+        - !Ref VpcEndpointSG
+
+  # VPC Endpoint — CloudWatch Logs
+  CwLogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+      SecurityGroupIds:
+        - !Ref VpcEndpointSG
+
+  VpcEndpointSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTPS from VPC for VPC Endpoints
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: '10.0.0.0/16'
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: NAT
+
+Outputs:
+  NatGatewayId:
+    Value: !Ref NatGateway
+  VpcEndpointSecurityGroupId:
+    Value: !Ref VpcEndpointSG
+    Export:
+      Name: !Sub smartcare-${Environment}-vpce-sg

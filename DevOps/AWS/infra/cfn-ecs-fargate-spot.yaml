@@ -1,0 +1,337 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - ECS Fargate Spot cluster (cost-optimized, 2 Spot + 1 On-Demand)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  AppWebImageUri:
+    Type: String
+  BrokerImageUri:
+    Type: String
+  RdsEndpoint:
+    Type: String
+  RdsPassword:
+    Type: String
+    NoEcho: true
+  SqsWorkflowEventsUrl:
+    Type: String
+    Default: ''
+  SqsOutreachResultsUrl:
+    Type: String
+    Default: ''
+  SqsAdminAlertsUrl:
+    Type: String
+    Default: ''
+  OpenSearchEndpoint:
+    Type: String
+    Default: ''
+  DesiredCount:
+    Type: Number
+    Default: 3
+
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub smartcare-spot-cluster-${Environment}
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: ECS-Spot
+
+  ClusterCapacityProviders:
+    Type: AWS::ECS::ClusterCapacityProviderAssociations
+    Properties:
+      Cluster: !Ref ECSCluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+          Base: 1
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 3
+
+  # Reuse same SG/ALB/IAM pattern as cfn-ecs-fargate.yaml
+  AlbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB inbound
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Component
+          Value: ECS-Spot
+
+  EcsSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Spot tasks
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8081
+          SourceSecurityGroupId: !Ref AlbSG
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Component
+          Value: ECS-Spot
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub smartcare-spot-alb-${Environment}
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-public-subnet-1
+        - Fn::ImportValue: !Sub smartcare-${Environment}-public-subnet-2
+      SecurityGroups:
+        - !Ref AlbSG
+
+  AppWebTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub sc-spot-web-${Environment}
+      Port: 8080
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      TargetType: ip
+      HealthCheckPath: /actuator/health
+
+  BrokerTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub sc-spot-brk-${Environment}
+      Port: 8081
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub smartcare-${Environment}-vpc-id
+      TargetType: ip
+      HealthCheckPath: /actuator/health
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AppWebTG
+
+  BrokerListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HttpListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          Values: ['/smart-care/api/broker/*']
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref BrokerTG
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-spot-exec-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-spot-task-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SmartCareAppAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['sqs:*', 'sns:Publish', 's3:GetObject', 's3:ListBucket', 'events:PutEvents', 'es:ESHttp*']
+                Resource: '*'
+
+  AppWebLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /smartcare/ecs-spot/app-web-${Environment}
+      RetentionInDays: 30
+
+  BrokerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /smartcare/ecs-spot/app-message-broker-${Environment}
+      RetentionInDays: 30
+
+  AppWebTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub smartcare-spot-web-${Environment}
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: app-web
+          Image: !Ref AppWebImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8080
+          Environment:
+            - Name: SPRING_PROFILES_ACTIVE
+              Value: aws
+            - Name: RDS_ENDPOINT
+              Value: !Ref RdsEndpoint
+            - Name: RDS_PASSWORD
+              Value: !Ref RdsPassword
+            - Name: RDS_DB_NAME
+              Value: agenticcare
+            - Name: SQS_WORKFLOW_EVENTS
+              Value: !Ref SqsWorkflowEventsUrl
+            - Name: SQS_OUTREACH_RESULTS
+              Value: !Ref SqsOutreachResultsUrl
+            - Name: SQS_ADMIN_ALERTS
+              Value: !Ref SqsAdminAlertsUrl
+            - Name: OPENSEARCH_ENDPOINT
+              Value: !Ref OpenSearchEndpoint
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AppWebLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  BrokerTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub smartcare-spot-broker-${Environment}
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: message-broker
+          Image: !Ref BrokerImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8081
+          Environment:
+            - Name: SPRING_PROFILES_ACTIVE
+              Value: aws
+            - Name: RDS_ENDPOINT
+              Value: !Ref RdsEndpoint
+            - Name: RDS_PASSWORD
+              Value: !Ref RdsPassword
+            - Name: RDS_DB_NAME
+              Value: agenticcare_broker
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref BrokerLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  # Services use capacity provider strategy instead of LaunchType
+  AppWebService:
+    Type: AWS::ECS::Service
+    DependsOn: HttpListener
+    Properties:
+      ServiceName: !Sub smartcare-spot-web-${Environment}
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref AppWebTaskDef
+      DesiredCount: !Ref DesiredCount
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+          Base: 1
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 3
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+            - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+          SecurityGroups:
+            - !Ref EcsSG
+      LoadBalancers:
+        - ContainerName: app-web
+          ContainerPort: 8080
+          TargetGroupArn: !Ref AppWebTG
+
+  BrokerService:
+    Type: AWS::ECS::Service
+    DependsOn: BrokerListenerRule
+    Properties:
+      ServiceName: !Sub smartcare-spot-broker-${Environment}
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref BrokerTaskDef
+      DesiredCount: !Ref DesiredCount
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+          Base: 1
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 3
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+            - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+          SecurityGroups:
+            - !Ref EcsSG
+      LoadBalancers:
+        - ContainerName: message-broker
+          ContainerPort: 8081
+          TargetGroupArn: !Ref BrokerTG
+
+Outputs:
+  AlbDnsName:
+    Value: !GetAtt LoadBalancer.DNSName
+    Export:
+      Name: !Sub smartcare-${Environment}-ecs-spot-alb-url
+  ClusterName:
+    Value: !Ref ECSCluster

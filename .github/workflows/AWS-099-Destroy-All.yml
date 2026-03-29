@@ -2,7 +2,12 @@ name: "AWS-099: Destroy All"
 on:
   workflow_dispatch:
     inputs:
-      # --- Reverse order: top-level services first ---
+      # --- Container stack (destroy first) ---
+      destroy_containers:
+        description: "Destroy Container Services (App Runner / ECS)"
+        type: boolean
+        default: true
+      # --- Core services ---
       destroy_cloudwatch:
         description: "Destroy CloudWatch Monitoring"
         type: boolean
@@ -43,6 +48,19 @@ on:
         description: "Destroy SNS Topics"
         type: boolean
         default: true
+      # --- Data + infrastructure (destructive, default off) ---
+      destroy_rds:
+        description: "Destroy RDS PostgreSQL (data loss!)"
+        type: boolean
+        default: false
+      destroy_ecr:
+        description: "Destroy ECR Repositories (images lost!)"
+        type: boolean
+        default: false
+      destroy_nat_endpoints:
+        description: "Destroy NAT Gateway + VPC Endpoints"
+        type: boolean
+        default: false
       destroy_s3:
         description: "Destroy S3 Bucket (data loss!)"
         type: boolean
@@ -72,27 +90,39 @@ jobs:
             echo "  Done: $name"
           }
 
-          # Top-level first (no dependents)
+          # 1. Container services (top-level, depends on RDS/ECR/NAT)
+          if [ "${{ inputs.destroy_containers }}" = "true" ]; then
+            destroy_stack "smartcare-apprunner"
+            destroy_stack "smartcare-ecs-fargate"
+            destroy_stack "smartcare-ecs-fargate-spot"
+          fi
+
+          # 2. Monitoring + managed services
           [ "${{ inputs.destroy_cloudwatch }}" = "true" ] && destroy_stack "smartcare-cloudwatch"
           [ "${{ inputs.destroy_connect }}" = "true" ] && destroy_stack "smartcare-connect"
           [ "${{ inputs.destroy_healthlake }}" = "true" ] && destroy_stack "smartcare-healthlake"
 
-          # Orchestration layer
+          # 3. Orchestration
           [ "${{ inputs.destroy_stepfunctions }}" = "true" ] && destroy_stack "smartcare-step-functions"
 
-          # Compute layer
+          # 4. Compute
           [ "${{ inputs.destroy_lambda }}" = "true" ] && destroy_stack "smartcare-lambda-agents"
           [ "${{ inputs.destroy_bedrock }}" = "true" ] && destroy_stack "smartcare-bedrock-agent"
 
-          # Data layer
+          # 5. Data
           [ "${{ inputs.destroy_opensearch }}" = "true" ] && destroy_stack "smartcare-opensearch"
 
-          # Messaging layer
+          # 6. Messaging
           [ "${{ inputs.destroy_eventbridge }}" = "true" ] && destroy_stack "smartcare-eventbridge"
           [ "${{ inputs.destroy_sqs }}" = "true" ] && destroy_stack "smartcare-sqs-queues"
           [ "${{ inputs.destroy_sns }}" = "true" ] && destroy_stack "smartcare-sns-topics"
 
-          # Foundation (default off — destructive)
+          # 7. Container infrastructure (default off)
+          [ "${{ inputs.destroy_rds }}" = "true" ] && destroy_stack "smartcare-rds"
+          [ "${{ inputs.destroy_ecr }}" = "true" ] && destroy_stack "smartcare-ecr"
+          [ "${{ inputs.destroy_nat_endpoints }}" = "true" ] && destroy_stack "smartcare-nat-vpc-endpoints"
+
+          # 8. Foundation (default off — destructive)
           [ "${{ inputs.destroy_s3 }}" = "true" ] && destroy_stack "smartcare-s3-bucket"
           [ "${{ inputs.destroy_vpc }}" = "true" ] && destroy_stack "smartcare-vpc"
 

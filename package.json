@@ -61,6 +61,10 @@
     "scenario:run": "gh workflow run run-scenario.yml",
     "analytics:extract": "gh workflow run extract-analytics.yml",
 
+    "docker:build:web": "docker build -f app-web/Dockerfile -t smartcare-app-web .",
+    "docker:build:broker": "docker build -f app-extensions/app-message-broker/Dockerfile -t smartcare-app-message-broker .",
+    "docker:build:all": "npm run docker:build:web && npm run docker:build:broker",
+
     "github:repo:secrets:push": "bash .github/scripts/set-github-secrets.sh",
     "aws:stacks:cancel": "bash .github/scripts/aws-stacks-cancel.sh",
 

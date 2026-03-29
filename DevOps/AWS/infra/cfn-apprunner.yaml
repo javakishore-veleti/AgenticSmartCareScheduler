@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SmartCare - App Runner services for app-web and message-broker (default deployment target)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  AppWebImageUri:
+    Type: String
+    Description: ECR image URI for app-web (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com/smartcare-app-web-dev:latest)
+  BrokerImageUri:
+    Type: String
+    Description: ECR image URI for message-broker
+  RdsEndpoint:
+    Type: String
+  RdsPassword:
+    Type: String
+    NoEcho: true
+  SqsWorkflowEventsUrl:
+    Type: String
+    Default: ''
+  SqsOutreachResultsUrl:
+    Type: String
+    Default: ''
+  SqsAdminAlertsUrl:
+    Type: String
+    Default: ''
+  OpenSearchEndpoint:
+    Type: String
+    Default: ''
+
+Resources:
+  # IAM role for App Runner to pull ECR images
+  AppRunnerECRAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-apprunner-ecr-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: AppRunner
+
+  # IAM role for App Runner instance (SQS, S3, etc.)
+  AppRunnerInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub smartcare-apprunner-instance-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: tasks.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SmartCareAppAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['sqs:*', 'sns:Publish', 's3:GetObject', 's3:ListBucket', 'events:PutEvents']
+                Resource: '*'
+              - Effect: Allow
+                Action: ['es:ESHttp*']
+                Resource: '*'
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: AppRunner
+
+  VpcConnector:
+    Type: AWS::AppRunner::VpcConnector
+    Properties:
+      VpcConnectorName: !Sub smartcare-vpc-connector-${Environment}
+      Subnets:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
+        - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
+      SecurityGroups:
+        - Fn::ImportValue: !Sub smartcare-${Environment}-rds-sg
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  AutoScalingConfig:
+    Type: AWS::AppRunner::AutoScalingConfiguration
+    Properties:
+      AutoScalingConfigurationName: !Sub smartcare-scaling-${Environment}
+      MinSize: 3
+      MaxSize: 6
+      MaxConcurrency: 100
+
+  AppWebService:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub smartcare-app-web-${Environment}
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerECRAccessRole.Arn
+        AutoDeploymentsEnabled: true
+        ImageRepository:
+          ImageIdentifier: !Ref AppWebImageUri
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: '8080'
+            RuntimeEnvironmentVariables:
+              - Name: SPRING_PROFILES_ACTIVE
+                Value: aws
+              - Name: RDS_ENDPOINT
+                Value: !Ref RdsEndpoint
+              - Name: RDS_PASSWORD
+                Value: !Ref RdsPassword
+              - Name: RDS_DB_NAME
+                Value: agenticcare
+              - Name: SQS_WORKFLOW_EVENTS
+                Value: !Ref SqsWorkflowEventsUrl
+              - Name: SQS_OUTREACH_RESULTS
+                Value: !Ref SqsOutreachResultsUrl
+              - Name: SQS_ADMIN_ALERTS
+                Value: !Ref SqsAdminAlertsUrl
+              - Name: OPENSEARCH_ENDPOINT
+                Value: !Ref OpenSearchEndpoint
+              - Name: AWS_REGION
+                Value: !Ref AWS::Region
+      InstanceConfiguration:
+        Cpu: '0.25 vCPU'
+        Memory: '0.5 GB'
+        InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /actuator/health
+        Interval: 20
+        Timeout: 5
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+      AutoScalingConfigurationArn: !Ref AutoScalingConfig
+      NetworkConfiguration:
+        EgressConfiguration:
+          EgressType: VPC
+          VpcConnectorArn: !Ref VpcConnector
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: AppRunner
+
+  BrokerService:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub smartcare-broker-${Environment}
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerECRAccessRole.Arn
+        AutoDeploymentsEnabled: true
+        ImageRepository:
+          ImageIdentifier: !Ref BrokerImageUri
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: '8081'
+            RuntimeEnvironmentVariables:
+              - Name: SPRING_PROFILES_ACTIVE
+                Value: aws
+              - Name: RDS_ENDPOINT
+                Value: !Ref RdsEndpoint
+              - Name: RDS_PASSWORD
+                Value: !Ref RdsPassword
+              - Name: RDS_DB_NAME
+                Value: agenticcare_broker
+              - Name: AWS_REGION
+                Value: !Ref AWS::Region
+      InstanceConfiguration:
+        Cpu: '0.25 vCPU'
+        Memory: '0.5 GB'
+        InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /actuator/health
+        Interval: 20
+        Timeout: 5
+      AutoScalingConfigurationArn: !Ref AutoScalingConfig
+      NetworkConfiguration:
+        EgressConfiguration:
+          EgressType: VPC
+          VpcConnectorArn: !Ref VpcConnector
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: AppRunner
+
+Outputs:
+  AppWebServiceUrl:
+    Value: !GetAtt AppWebService.ServiceUrl
+    Export:
+      Name: !Sub smartcare-${Environment}-apprunner-web-url
+  BrokerServiceUrl:
+    Value: !GetAtt BrokerService.ServiceUrl
+    Export:
+      Name: !Sub smartcare-${Environment}-apprunner-broker-url

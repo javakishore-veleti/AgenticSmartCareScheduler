@@ -1,0 +1,48 @@
+name: "AWS-018: Destroy Containers"
+on:
+  workflow_dispatch:
+    inputs:
+      container_target:
+        description: "Container platform to destroy (all removes all three)"
+        required: true
+        default: "all"
+        type: choice
+        options: [all, apprunner, ecs-fargate, ecs-fargate-spot]
+  workflow_call:
+    inputs:
+      container_target:
+        description: "Container platform to destroy"
+        type: string
+        default: "all"
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+
+      - name: Destroy Container Stacks
+        run: |
+          TARGET="${{ inputs.container_target || 'all' }}"
+
+          delete_stack() {
+            local STACK="$1"
+            echo "Deleting stack: $STACK"
+            aws cloudformation delete-stack --stack-name "$STACK"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK" || true
+            echo "Done: $STACK"
+          }
+
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "apprunner" ]; then
+            delete_stack "smartcare-apprunner"
+          fi
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "ecs-fargate" ]; then
+            delete_stack "smartcare-ecs-fargate"
+          fi
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "ecs-fargate-spot" ]; then
+            delete_stack "smartcare-ecs-fargate-spot"
+          fi

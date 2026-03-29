@@ -1,0 +1,25 @@
+# AWS deployment profile for Message Broker
+# Activate with: SPRING_PROFILES_ACTIVE=aws
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${RDS_ENDPOINT}:${RDS_PORT:5432}/${RDS_DB_NAME:agenticcare_broker}
+    driver-class-name: org.postgresql.Driver
+    username: ${RDS_USERNAME:smartcare}
+    password: ${RDS_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  h2:
+    console:
+      enabled: false
+
+logging:
+  pattern:
+    console: '{"ts":"%d{ISO8601}","level":"%p","logger":"%c","msg":"%m","thread":"%t"}%n'
+  level:
+    com.agenticcare: INFO
+    org.springframework: WARN

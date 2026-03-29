@@ -68,6 +68,30 @@ npm run docker:up              # All DevOps/Local services (Postgres, Kafka, Red
 npm run docker:down
 ```
 
+### Docker (microservice images)
+```bash
+npm run docker:build:web       # Build app-web Docker image
+npm run docker:build:broker    # Build message-broker Docker image
+npm run docker:build:all       # Build both
+```
+
+### AWS Container Deployment
+Deploy-All workflow includes container deployment with 3 targets:
+- **App Runner** (default) — simplest, auto-scales, VPC connector to RDS
+- **ECS Fargate** — ALB + 3 tasks per service, private subnets
+- **ECS Fargate Spot** — same as Fargate but 2 Spot + 1 On-Demand (cost savings)
+
+All targets use the same Docker image + `application-aws.yml` profile.
+
+### Spring Profiles
+| Profile | Database | Messaging | Use Case |
+|---|---|---|---|
+| (default) | H2 | http-broker | Local dev, zero setup |
+| `local-postgres` | Postgres (Docker) | http-broker | Local with real DB |
+| `local-kafka` | H2 | Kafka | Local Kafka testing |
+| `aws-integration` | H2 | SQS | Laptop polling AWS |
+| `aws` | RDS PostgreSQL | SQS | Container deployment (App Runner/ECS) |
+
 ## Project Context
 
 IEEE ICTS4eHealth 2026 conference paper implementation: a multi-agent AI framework that reduces healthcare appointment no-shows through context-aware communication channel selection.

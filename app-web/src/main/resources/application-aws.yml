@@ -1,0 +1,62 @@
+# AWS deployment profile — used by App Runner, ECS Fargate, and ECS Fargate Spot.
+# All configuration driven by environment variables injected by the container runtime.
+# Activate with: SPRING_PROFILES_ACTIVE=aws
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${RDS_ENDPOINT}:${RDS_PORT:5432}/${RDS_DB_NAME:agenticcare}
+    driver-class-name: org.postgresql.Driver
+    username: ${RDS_USERNAME:smartcare}
+    password: ${RDS_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  h2:
+    console:
+      enabled: false
+
+smartcare:
+  messaging:
+    provider: aws-sqs
+    broker-url: ""
+  aws:
+    region: ${AWS_REGION:us-east-1}
+    s3:
+      dataset-bucket: ${S3_DATASET_BUCKET:}
+    sqs:
+      workflow-events-queue-url: ${SQS_WORKFLOW_EVENTS:}
+      outreach-results-queue-url: ${SQS_OUTREACH_RESULTS:}
+      admin-alerts-queue-url: ${SQS_ADMIN_ALERTS:}
+    step-functions:
+      state-machine-arn: ${STEP_FUNCTIONS_ARN:}
+    eventbridge:
+      bus-name: ${EVENTBRIDGE_BUS:}
+    opensearch:
+      endpoint: ${OPENSEARCH_ENDPOINT:}
+    lambda:
+      pca-arn: ${LAMBDA_PCA_ARN:}
+      coa-arn: ${LAMBDA_COA_ARN:}
+  security:
+    aes-encryption-key: ${AES_ENCRYPTION_KEY:}
+    jwt-signing-key: ${JWT_SIGNING_KEY:}
+
+# JSON structured logging — collected by CloudWatch via awslogs/fluentbit driver
+logging:
+  pattern:
+    console: '{"ts":"%d{ISO8601}","level":"%p","logger":"%c","msg":"%m","thread":"%t"}%n'
+  level:
+    com.agenticcare: INFO
+    org.springframework: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${SMARTCARE_ENV:aws}

@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+**/node_modules
+**/target
+data
+models
+analytics
+tests
+DataManagement
+DevOps
+*.md
+!README.md
+.dockerignore
+.env*
