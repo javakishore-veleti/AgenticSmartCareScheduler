@@ -73,7 +73,7 @@ jobs:
           echo "Creating new VPC via CloudFormation..."
           aws cloudformation deploy \
             --stack-name "smartcare-vpc" \
-            --template-file infra/cfn-vpc.yaml \
+            --template-file DevOps/AWS/infra/cfn-vpc.yaml \
             --no-fail-on-empty-changeset
 
           VPC_ID=$(aws cloudformation describe-stacks \

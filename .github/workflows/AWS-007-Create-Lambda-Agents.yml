@@ -27,7 +27,7 @@ jobs:
 
       - name: Package Lambda functions
         run: |
-          cd infra/lambda
+          cd DevOps/AWS/infra/lambda
           for agent in pca coa psa rra aca; do
             if [ "${{ inputs.agent || 'all' }}" = "all" ] || [ "${{ inputs.agent }}" = "$agent" ]; then
               echo "Packaging $agent..."
@@ -45,7 +45,7 @@ jobs:
           AGENT="${{ inputs.agent || 'all' }}"
           aws cloudformation deploy \
             --stack-name "smartcare-lambda-agents" \
-            --template-file infra/cfn-lambda-agents.yaml \
+            --template-file DevOps/AWS/infra/cfn-lambda-agents.yaml \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides \
               AgentToDeploy=$AGENT \

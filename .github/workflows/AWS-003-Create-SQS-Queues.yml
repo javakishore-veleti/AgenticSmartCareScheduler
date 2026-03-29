@@ -31,7 +31,7 @@ jobs:
           STACK_NAME="smartcare-sqs-queues"
           aws cloudformation deploy \
             --stack-name "$STACK_NAME" \
-            --template-file infra/cfn-sqs-queues.yaml \
+            --template-file DevOps/AWS/infra/cfn-sqs-queues.yaml \
             --no-fail-on-empty-changeset
 
           echo "workflow_events_queue_url=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`WorkflowEventsQueueUrl`].OutputValue' --output text)" >> $GITHUB_OUTPUT

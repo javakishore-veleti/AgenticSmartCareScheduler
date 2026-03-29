@@ -17,5 +17,5 @@ jobs:
         run: |
           aws cloudformation deploy \
             --stack-name "smartcare-s3-bucket" \
-            --template-file infra/cfn-s3-bucket.yaml \
+            --template-file DevOps/AWS/infra/cfn-s3-bucket.yaml \
             --no-fail-on-empty-changeset

@@ -31,7 +31,7 @@ jobs:
           STACK_NAME="smartcare-sns-topics"
           aws cloudformation deploy \
             --stack-name "$STACK_NAME" \
-            --template-file infra/cfn-sns-topics.yaml \
+            --template-file DevOps/AWS/infra/cfn-sns-topics.yaml \
             --no-fail-on-empty-changeset
 
           echo "appointment_event_topic_arn=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`AppointmentEventTopicArn`].OutputValue' --output text)" >> $GITHUB_OUTPUT

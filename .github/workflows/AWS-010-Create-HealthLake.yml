@@ -17,5 +17,5 @@ jobs:
         run: |
           aws cloudformation deploy \
             --stack-name "smartcare-healthlake" \
-            --template-file infra/cfn-healthlake.yaml \
+            --template-file DevOps/AWS/infra/cfn-healthlake.yaml \
             --no-fail-on-empty-changeset
