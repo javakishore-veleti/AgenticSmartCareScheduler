@@ -7,7 +7,7 @@ Parameters:
     Default: dev
   AppWebImageUri:
     Type: String
-    Description: ECR image URI for app-web (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com/smartcare-app-web-dev:latest)
+    Description: ECR image URI for app-web
   BrokerImageUri:
     Type: String
     Description: ECR image URI for message-broker
@@ -30,7 +30,6 @@ Parameters:
     Default: ''
 
 Resources:
-  # IAM role for App Runner to pull ECR images
   AppRunnerECRAccessRole:
     Type: AWS::IAM::Role
     Properties:
@@ -52,7 +51,6 @@ Resources:
         - Key: Component
           Value: AppRunner
 
-  # IAM role for App Runner instance (SQS, S3, etc.)
   AppRunnerInstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -70,10 +68,7 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: ['sqs:*', 'sns:Publish', 's3:GetObject', 's3:ListBucket', 'events:PutEvents']
-                Resource: '*'
-              - Effect: Allow
-                Action: ['es:ESHttp*']
+                Action: ['sqs:*', 'sns:Publish', 's3:GetObject', 's3:ListBucket', 'events:PutEvents', 'es:ESHttp*']
                 Resource: '*'
       Tags:
         - Key: Project
@@ -86,7 +81,7 @@ Resources:
   VpcConnector:
     Type: AWS::AppRunner::VpcConnector
     Properties:
-      VpcConnectorName: !Sub smartcare-vpc-connector-${Environment}
+      VpcConnectorName: !Sub smartcare-vpc-conn-${Environment}
       Subnets:
         - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-1
         - Fn::ImportValue: !Sub smartcare-${Environment}-private-subnet-2
@@ -99,7 +94,7 @@ Resources:
   AutoScalingConfig:
     Type: AWS::AppRunner::AutoScalingConfiguration
     Properties:
-      AutoScalingConfigurationName: !Sub smartcare-scaling-${Environment}
+      AutoScalingConfigurationName: !Sub smartcarescaling${Environment}
       MinSize: 3
       MaxSize: 6
       MaxConcurrency: 100
@@ -118,24 +113,15 @@ Resources:
           ImageConfiguration:
             Port: '8080'
             RuntimeEnvironmentVariables:
-              - Name: SPRING_PROFILES_ACTIVE
-                Value: aws
-              - Name: RDS_ENDPOINT
-                Value: !Ref RdsEndpoint
-              - Name: RDS_PASSWORD
-                Value: !Ref RdsPassword
-              - Name: RDS_DB_NAME
-                Value: agenticcare
-              - Name: SQS_WORKFLOW_EVENTS
-                Value: !Ref SqsWorkflowEventsUrl
-              - Name: SQS_OUTREACH_RESULTS
-                Value: !Ref SqsOutreachResultsUrl
-              - Name: SQS_ADMIN_ALERTS
-                Value: !Ref SqsAdminAlertsUrl
-              - Name: OPENSEARCH_ENDPOINT
-                Value: !Ref OpenSearchEndpoint
-              - Name: AWS_REGION
-                Value: !Ref AWS::Region
+              SPRING_PROFILES_ACTIVE: aws
+              RDS_ENDPOINT: !Ref RdsEndpoint
+              RDS_PASSWORD: !Ref RdsPassword
+              RDS_DB_NAME: agenticcare
+              SQS_WORKFLOW_EVENTS: !Ref SqsWorkflowEventsUrl
+              SQS_OUTREACH_RESULTS: !Ref SqsOutreachResultsUrl
+              SQS_ADMIN_ALERTS: !Ref SqsAdminAlertsUrl
+              OPENSEARCH_ENDPOINT: !Ref OpenSearchEndpoint
+              AWS_REGION: !Ref AWS::Region
       InstanceConfiguration:
         Cpu: '1024'
         Memory: '2048'
@@ -174,16 +160,11 @@ Resources:
           ImageConfiguration:
             Port: '8081'
             RuntimeEnvironmentVariables:
-              - Name: SPRING_PROFILES_ACTIVE
-                Value: aws
-              - Name: RDS_ENDPOINT
-                Value: !Ref RdsEndpoint
-              - Name: RDS_PASSWORD
-                Value: !Ref RdsPassword
-              - Name: RDS_DB_NAME
-                Value: agenticcare_broker
-              - Name: AWS_REGION
-                Value: !Ref AWS::Region
+              SPRING_PROFILES_ACTIVE: aws
+              RDS_ENDPOINT: !Ref RdsEndpoint
+              RDS_PASSWORD: !Ref RdsPassword
+              RDS_DB_NAME: agenticcare_broker
+              AWS_REGION: !Ref AWS::Region
       InstanceConfiguration:
         Cpu: '1024'
         Memory: '2048'
