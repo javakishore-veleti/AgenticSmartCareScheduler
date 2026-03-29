@@ -105,8 +105,8 @@ Resources:
         Variables:
           ENVIRONMENT: !Ref Environment
           CONNECT_INSTANCE_ID: ''
-          OUTREACH_SNS_TOPIC_ARN: !ImportValue
-            !Sub smartcare-${Environment}-outreach-result-topic
+          OUTREACH_SNS_TOPIC_ARN:
+            Fn::ImportValue: !Sub smartcare-${Environment}-outreach-result-topic
       Tags:
         - Key: Agent
           Value: COA
@@ -149,8 +149,8 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          OPENSEARCH_ENDPOINT: !ImportValue
-            !Sub smartcare-${Environment}-opensearch-endpoint
+          OPENSEARCH_ENDPOINT:
+            Fn::ImportValue: !Sub smartcare-${Environment}-opensearch-endpoint
           ENCRYPTION_KEY: !Ref EncryptionKey
       Tags:
         - Key: Agent

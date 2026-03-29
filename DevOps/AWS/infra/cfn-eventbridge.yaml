@@ -25,8 +25,8 @@ Resources:
         detail-type: ["AppointmentEvent"]
       Targets:
         - Id: WorkflowEventsQueue
-          Arn: !ImportValue
-            !Sub smartcare-${Environment}-workflow-events-queue-url
+          Arn:
+            Fn::ImportValue: !Sub smartcare-${Environment}-workflow-events-queue-arn
       State: ENABLED
 
   OutreachCompletedRule:
@@ -39,8 +39,8 @@ Resources:
         detail-type: ["OutreachCompleted"]
       Targets:
         - Id: OutreachResultsQueue
-          Arn: !ImportValue
-            !Sub smartcare-${Environment}-outreach-results-queue-url
+          Arn:
+            Fn::ImportValue: !Sub smartcare-${Environment}-outreach-results-queue-arn
       State: ENABLED
 
   AdminAlertRule:
@@ -53,8 +53,8 @@ Resources:
         detail-type: ["AdminAlert"]
       Targets:
         - Id: AdminAlertsQueue
-          Arn: !ImportValue
-            !Sub smartcare-${Environment}-admin-alerts-queue-url
+          Arn:
+            Fn::ImportValue: !Sub smartcare-${Environment}-admin-alerts-queue-arn
       State: ENABLED
 
 Outputs:

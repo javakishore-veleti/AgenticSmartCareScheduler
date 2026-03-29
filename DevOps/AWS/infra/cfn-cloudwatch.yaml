@@ -356,8 +356,8 @@ Resources:
       MetricName: ExecutionsFailed
       Dimensions:
         - Name: StateMachineArn
-          Value: !ImportValue
-            !Sub smartcare-${Environment}-state-machine-arn
+          Value:
+            Fn::ImportValue: !Sub smartcare-${Environment}-state-machine-arn
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1

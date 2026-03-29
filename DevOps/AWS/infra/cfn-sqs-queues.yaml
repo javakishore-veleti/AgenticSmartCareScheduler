@@ -68,15 +68,21 @@ Outputs:
       Name: !Sub smartcare-${Environment}-workflow-events-queue-url
   WorkflowEventsQueueArn:
     Value: !GetAtt WorkflowEventsQueue.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-workflow-events-queue-arn
   OutreachResultsQueueUrl:
     Value: !Ref OutreachResultsQueue
     Export:
       Name: !Sub smartcare-${Environment}-outreach-results-queue-url
   OutreachResultsQueueArn:
     Value: !GetAtt OutreachResultsQueue.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-outreach-results-queue-arn
   AdminAlertsQueueUrl:
     Value: !Ref AdminAlertsQueue
     Export:
       Name: !Sub smartcare-${Environment}-admin-alerts-queue-url
   AdminAlertsQueueArn:
     Value: !GetAtt AdminAlertsQueue.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-admin-alerts-queue-arn

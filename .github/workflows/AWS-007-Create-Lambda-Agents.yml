@@ -27,16 +27,42 @@ jobs:
 
       - name: Package Lambda functions
         run: |
-          cd DevOps/AWS/infra/lambda
-          for agent in pca coa psa rra aca; do
-            if [ "${{ inputs.agent || 'all' }}" = "all" ] || [ "${{ inputs.agent }}" = "$agent" ]; then
-              echo "Packaging $agent..."
-              cd $agent
-              pip install -r requirements.txt -t package/
-              cp *.py package/
-              cd package && zip -r ../../${agent}-lambda.zip . && cd ..
-              rm -rf package
-              cd ..
+          AGENTS_DIR="DataManagement/SmartCareAgents"
+          DEPLOY_INPUT="${{ inputs.agent || 'all' }}"
+          OUTDIR="$(pwd)/lambda-packages"
+          mkdir -p "$OUTDIR"
+
+          # Map short names to directory names
+          declare -A AGENT_MAP=(
+            [pca]="PatientContext"
+            [coa]="CommunicationOrchestration"
+            [psa]="ProviderScheduling"
+            [rra]="ResourceReallocation"
+            [aca]="AuditCompliance"
+          )
+
+          for short in pca coa psa rra aca; do
+            if [ "$DEPLOY_INPUT" = "all" ] || [ "$DEPLOY_INPUT" = "$short" ]; then
+              dir="${AGENT_MAP[$short]}"
+              echo "Packaging $short ($dir)..."
+              STAGING=$(mktemp -d)
+
+              # Copy core agent code + shared
+              cp "$AGENTS_DIR/$dir/core/"*.py "$STAGING/"
+              cp "$AGENTS_DIR/Shared/core/"*.py "$STAGING/"
+
+              # Copy AWS Lambda wrapper
+              cp "$AGENTS_DIR/AWS/$dir/wrapper/"*.py "$STAGING/"
+
+              # Install boto3 (usually in Lambda runtime, but include for safety)
+              pip install boto3 -t "$STAGING/" -q
+
+              # Zip
+              cd "$STAGING"
+              zip -r "$OUTDIR/${short}-lambda.zip" . -q
+              cd -
+              rm -rf "$STAGING"
+              echo "  -> ${short}-lambda.zip"
             fi
           done
 
@@ -48,6 +74,5 @@ jobs:
             --template-file DevOps/AWS/infra/cfn-lambda-agents.yaml \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides \
-              AgentToDeploy=$AGENT \
               EncryptionKey=${{ secrets.AGENTIC_SCS_AES_ENCRYPTION_KEY }} \
             --no-fail-on-empty-changeset

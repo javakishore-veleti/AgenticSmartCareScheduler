@@ -26,10 +26,8 @@ Resources:
               - Effect: Allow
                 Action: lambda:InvokeFunction
                 Resource:
-                  - !ImportValue
-                    !Sub smartcare-${Environment}-pca-arn
-                  - !ImportValue
-                    !Sub smartcare-${Environment}-coa-arn
+                  - Fn::ImportValue: !Sub smartcare-${Environment}-pca-arn
+                  - Fn::ImportValue: !Sub smartcare-${Environment}-coa-arn
               - Effect: Allow
                 Action: events:PutEvents
                 Resource: '*'
@@ -144,8 +142,8 @@ Resources:
     Properties:
       Name: !Sub /smartcare/${Environment}/pca-function-arn
       Type: String
-      Value: !ImportValue
-        !Sub smartcare-${Environment}-pca-arn
+      Value:
+        Fn::ImportValue: !Sub smartcare-${Environment}-pca-arn
 
 Outputs:
   StateMachineArn:
