@@ -2,21 +2,16 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "CloudFormation",
+      "Sid": "CFN",
       "Effect": "Allow",
       "Action": [
-        "cloudformation:CreateStack",
-        "cloudformation:UpdateStack",
-        "cloudformation:DeleteStack",
-        "cloudformation:DescribeStacks",
-        "cloudformation:DescribeStackEvents",
+        "cloudformation:Create*",
+        "cloudformation:Update*",
+        "cloudformation:Delete*",
+        "cloudformation:Describe*",
+        "cloudformation:Execute*",
         "cloudformation:GetTemplate",
-        "cloudformation:ListStacks",
-        "cloudformation:CreateChangeSet",
-        "cloudformation:ExecuteChangeSet",
-        "cloudformation:DescribeChangeSet",
-        "cloudformation:DeleteChangeSet",
-        "cloudformation:ListChangeSets"
+        "cloudformation:List*"
       ],
       "Resource": "arn:aws:cloudformation:*:*:stack/smartcare-*/*"
     },
@@ -35,75 +30,15 @@
         "iam:PassRole",
         "iam:TagRole",
         "iam:UntagRole",
-        "iam:ListRolePolicies",
-        "iam:ListAttachedRolePolicies"
+        "iam:List*Policies"
       ],
       "Resource": "arn:aws:iam::*:role/smartcare-*"
     },
     {
       "Sid": "S3",
       "Effect": "Allow",
-      "Action": [
-        "s3:CreateBucket",
-        "s3:DeleteBucket",
-        "s3:PutBucketVersioning",
-        "s3:PutBucketPolicy",
-        "s3:PutLifecycleConfiguration",
-        "s3:PutBucketTagging",
-        "s3:GetBucket*",
-        "s3:ListBucket",
-        "s3:GetObject",
-        "s3:PutObject"
-      ],
+      "Action": ["s3:*"],
       "Resource": ["arn:aws:s3:::smartcare-*", "arn:aws:s3:::smartcare-*/*"]
-    },
-    {
-      "Sid": "Messaging",
-      "Effect": "Allow",
-      "Action": [
-        "sns:CreateTopic",
-        "sns:DeleteTopic",
-        "sns:GetTopicAttributes",
-        "sns:SetTopicAttributes",
-        "sns:TagResource",
-        "sqs:CreateQueue",
-        "sqs:DeleteQueue",
-        "sqs:GetQueueAttributes",
-        "sqs:SetQueueAttributes",
-        "sqs:TagQueue",
-        "sqs:GetQueueUrl",
-        "events:CreateEventBus",
-        "events:DeleteEventBus",
-        "events:DescribeEventBus",
-        "events:PutRule",
-        "events:DeleteRule",
-        "events:DescribeRule",
-        "events:PutTargets",
-        "events:RemoveTargets",
-        "events:TagResource"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Sid": "Compute",
-      "Effect": "Allow",
-      "Action": [
-        "lambda:CreateFunction",
-        "lambda:UpdateFunctionCode",
-        "lambda:UpdateFunctionConfiguration",
-        "lambda:DeleteFunction",
-        "lambda:GetFunction",
-        "lambda:GetFunctionConfiguration",
-        "lambda:TagResource",
-        "lambda:AddPermission",
-        "lambda:RemovePermission",
-        "states:CreateStateMachine",
-        "states:UpdateStateMachine",
-        "states:DeleteStateMachine",
-        "states:DescribeStateMachine",
-        "states:TagResource"
-      ],
-      "Resource": "*"
     },
     {
       "Sid": "SSM",

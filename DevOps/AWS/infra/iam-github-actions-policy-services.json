@@ -4,84 +4,37 @@
     {
       "Sid": "OpenSearch",
       "Effect": "Allow",
-      "Action": [
-        "es:CreateDomain",
-        "es:DeleteDomain",
-        "es:DescribeDomain",
-        "es:DescribeDomains",
-        "es:UpdateDomainConfig",
-        "es:ListDomainNames",
-        "es:AddTags"
-      ],
+      "Action": ["es:*"],
       "Resource": "arn:aws:es:*:*:domain/smartcare-*"
     },
     {
       "Sid": "CloudWatch",
       "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:DeleteLogGroup",
-        "logs:PutRetentionPolicy",
-        "logs:DescribeLogGroups",
-        "logs:TagResource",
-        "logs:PutAccountPolicy",
-        "logs:DeleteAccountPolicy",
-        "logs:DescribeAccountPolicies",
-        "cloudwatch:PutDashboard",
-        "cloudwatch:DeleteDashboards",
-        "cloudwatch:GetDashboard",
-        "cloudwatch:PutMetricAlarm",
-        "cloudwatch:DeleteAlarms",
-        "cloudwatch:DescribeAlarms"
-      ],
+      "Action": ["logs:*", "cloudwatch:Put*", "cloudwatch:Delete*", "cloudwatch:Get*", "cloudwatch:Describe*"],
       "Resource": "*"
     },
     {
       "Sid": "VPC",
       "Effect": "Allow",
       "Action": [
-        "ec2:CreateVpc",
-        "ec2:DeleteVpc",
-        "ec2:DescribeVpcs",
-        "ec2:ModifyVpcAttribute",
-        "ec2:CreateSubnet",
-        "ec2:DeleteSubnet",
-        "ec2:DescribeSubnets",
-        "ec2:CreateInternetGateway",
-        "ec2:DeleteInternetGateway",
-        "ec2:AttachInternetGateway",
-        "ec2:DetachInternetGateway",
-        "ec2:DescribeInternetGateways",
-        "ec2:CreateRouteTable",
-        "ec2:DeleteRouteTable",
-        "ec2:DescribeRouteTables",
-        "ec2:CreateRoute",
-        "ec2:DeleteRoute",
-        "ec2:AssociateRouteTable",
-        "ec2:DisassociateRouteTable",
-        "ec2:CreateTags",
-        "ec2:DeleteTags",
-        "ec2:DescribeAvailabilityZones"
+        "ec2:CreateVpc", "ec2:DeleteVpc", "ec2:DescribeVpcs", "ec2:ModifyVpcAttribute",
+        "ec2:CreateSubnet", "ec2:DeleteSubnet", "ec2:DescribeSubnets",
+        "ec2:CreateInternetGateway", "ec2:DeleteInternetGateway",
+        "ec2:AttachInternetGateway", "ec2:DetachInternetGateway", "ec2:DescribeInternetGateways",
+        "ec2:CreateRouteTable", "ec2:DeleteRouteTable", "ec2:DescribeRouteTables",
+        "ec2:CreateRoute", "ec2:DeleteRoute",
+        "ec2:AssociateRouteTable", "ec2:DisassociateRouteTable",
+        "ec2:CreateTags", "ec2:DeleteTags", "ec2:DescribeAvailabilityZones"
       ],
       "Resource": "*"
     },
     {
-      "Sid": "ManagedServices",
+      "Sid": "Managed",
       "Effect": "Allow",
       "Action": [
-        "bedrock:CreateAgent",
-        "bedrock:DeleteAgent",
-        "bedrock:GetAgent",
-        "bedrock:UpdateAgent",
-        "bedrock:InvokeModel",
-        "connect:CreateInstance",
-        "connect:DeleteInstance",
-        "connect:DescribeInstance",
-        "connect:ListInstances",
-        "healthlake:CreateFHIRDatastore",
-        "healthlake:DeleteFHIRDatastore",
-        "healthlake:DescribeFHIRDatastore",
-        "healthlake:ListFHIRDatastores"
+        "bedrock:*Agent*", "bedrock:InvokeModel",
+        "connect:*Instance*",
+        "healthlake:*FHIRDatastore*"
       ],
       "Resource": "*"
     }

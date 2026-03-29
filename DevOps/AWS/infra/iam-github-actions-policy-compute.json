@@ -1,0 +1,48 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Messaging",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:DeleteTopic",
+        "sns:Get*",
+        "sns:Set*",
+        "sns:TagResource",
+        "sqs:CreateQueue",
+        "sqs:DeleteQueue",
+        "sqs:Get*",
+        "sqs:Set*",
+        "sqs:TagQueue",
+        "events:Create*",
+        "events:Delete*",
+        "events:Describe*",
+        "events:PutRule",
+        "events:PutTargets",
+        "events:RemoveTargets",
+        "events:TagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Compute",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:UpdateFunction*",
+        "lambda:DeleteFunction",
+        "lambda:GetFunction*",
+        "lambda:TagResource",
+        "lambda:AddPermission",
+        "lambda:RemovePermission",
+        "states:CreateStateMachine",
+        "states:UpdateStateMachine",
+        "states:DeleteStateMachine",
+        "states:DescribeStateMachine",
+        "states:TagResource"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
