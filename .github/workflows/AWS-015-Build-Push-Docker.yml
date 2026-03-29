@@ -38,7 +38,7 @@ jobs:
           APP_WEB_REPO=$(aws cloudformation describe-stacks --stack-name smartcare-ecr \
             --query "Stacks[0].Outputs[?OutputKey=='AppWebRepoUri'].OutputValue" --output text)
           BROKER_REPO=$(aws cloudformation describe-stacks --stack-name smartcare-ecr \
-            --query "Stacks[0].Outputs[?OutputKey=='BrokerRepoUri'].OutputValue" --output text)
+            --query "Stacks[0].Outputs[?OutputKey=='AppMessageBrokerRepoUri'].OutputValue" --output text)
           echo "app_web_repo=$APP_WEB_REPO" >> "$GITHUB_OUTPUT"
           echo "broker_repo=$BROKER_REPO" >> "$GITHUB_OUTPUT"
 
