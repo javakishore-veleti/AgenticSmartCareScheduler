@@ -79,31 +79,31 @@ jobs:
 
   create-sns:
     if: ${{ inputs.create_sns }}
-    uses: ./.github/workflows/AWS-003-Create-SNS-Topics.yml
+    uses: ./.github/workflows/AWS-002-Create-SNS-Topics.yml
     secrets: inherit
 
   create-sqs:
     needs: [create-sns]
     if: ${{ always() && inputs.create_sqs }}
-    uses: ./.github/workflows/AWS-004-Create-SQS-Queues.yml
+    uses: ./.github/workflows/AWS-003-Create-SQS-Queues.yml
     secrets: inherit
 
   create-eventbridge:
     needs: [create-sqs]
     if: ${{ always() && inputs.create_eventbridge }}
-    uses: ./.github/workflows/AWS-005-Create-EventBridge.yml
+    uses: ./.github/workflows/AWS-004-Create-EventBridge.yml
     secrets: inherit
 
   create-lambda:
     needs: [create-sns, create-eventbridge]
     if: ${{ always() && inputs.create_lambda }}
-    uses: ./.github/workflows/AWS-008-Create-Lambda-Agents.yml
+    uses: ./.github/workflows/AWS-007-Create-Lambda-Agents.yml
     secrets: inherit
 
   create-stepfunctions:
     needs: [create-lambda]
     if: ${{ always() && inputs.create_stepfunctions }}
-    uses: ./.github/workflows/AWS-009-Create-StepFunctions.yml
+    uses: ./.github/workflows/AWS-008-Create-StepFunctions.yml
     secrets: inherit
 
   create-cloudwatch:
@@ -123,17 +123,17 @@ jobs:
 
   create-bedrock:
     if: ${{ inputs.create_bedrock }}
-    uses: ./.github/workflows/AWS-007-Create-Bedrock-Agent.yml
+    uses: ./.github/workflows/AWS-006-Create-Bedrock-Agent.yml
     secrets: inherit
 
   create-connect:
     if: ${{ inputs.create_connect }}
-    uses: ./.github/workflows/AWS-010-Create-Connect.yml
+    uses: ./.github/workflows/AWS-009-Create-Connect.yml
     secrets: inherit
 
   create-healthlake:
     if: ${{ inputs.create_healthlake }}
-    uses: ./.github/workflows/AWS-011-Create-HealthLake.yml
+    uses: ./.github/workflows/AWS-010-Create-HealthLake.yml
     secrets: inherit
 
   # --- Generate env file (runs last, always) ---
