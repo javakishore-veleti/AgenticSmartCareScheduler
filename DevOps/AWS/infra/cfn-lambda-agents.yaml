@@ -84,6 +84,10 @@ Resources:
       FunctionName: !Sub smartcare-pca-${Environment}
       Runtime: python3.12
       Handler: handler.lambda_handler
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {"statusCode": 200, "body": "PCA placeholder — deploy real code via CI/CD"}
       Role: !GetAtt AgentExecutionRole.Arn
       Timeout: 60
       MemorySize: 512
@@ -108,6 +112,10 @@ Resources:
       FunctionName: !Sub smartcare-coa-${Environment}
       Runtime: python3.12
       Handler: handler.lambda_handler
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {"statusCode": 200, "body": "COA placeholder — deploy real code via CI/CD"}
       Role: !GetAtt AgentExecutionRole.Arn
       Timeout: 60
       MemorySize: 256
@@ -115,8 +123,7 @@ Resources:
         Variables:
           ENVIRONMENT: !Ref Environment
           CONNECT_INSTANCE_ID: ''
-          OUTREACH_SNS_TOPIC_ARN:
-            Fn::ImportValue: !Sub smartcare-${Environment}-outreach-result-topic
+          OUTREACH_SNS_TOPIC_ARN: 'placeholder'
       Tags:
         - Key: Agent
           Value: COA
@@ -133,6 +140,10 @@ Resources:
       FunctionName: !Sub smartcare-psa-${Environment}
       Runtime: python3.12
       Handler: handler.lambda_handler
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {"statusCode": 200, "body": "PSA placeholder — deploy real code via CI/CD"}
       Role: !GetAtt AgentExecutionRole.Arn
       Timeout: 30
       MemorySize: 256
@@ -152,6 +163,10 @@ Resources:
       FunctionName: !Sub smartcare-rra-${Environment}
       Runtime: python3.12
       Handler: handler.lambda_handler
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {"statusCode": 200, "body": "RRA placeholder — deploy real code via CI/CD"}
       Role: !GetAtt AgentExecutionRole.Arn
       Timeout: 30
       MemorySize: 256
@@ -171,14 +186,17 @@ Resources:
       FunctionName: !Sub smartcare-aca-${Environment}
       Runtime: python3.12
       Handler: handler.lambda_handler
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {"statusCode": 200, "body": "ACA placeholder — deploy real code via CI/CD"}
       Role: !GetAtt AgentExecutionRole.Arn
       Timeout: 30
       MemorySize: 256
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          OPENSEARCH_ENDPOINT:
-            Fn::ImportValue: !Sub smartcare-${Environment}-opensearch-endpoint
+          OPENSEARCH_ENDPOINT: 'placeholder'
           ENCRYPTION_KEY: !Ref EncryptionKey
       Tags:
         - Key: Agent

@@ -66,9 +66,21 @@ jobs:
             fi
           done
 
+      - name: Clean up failed stack if exists
+        run: |
+          STATUS=$(aws cloudformation describe-stacks --stack-name smartcare-lambda-agents \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+          if [[ "$STATUS" == *FAILED* ]] || [[ "$STATUS" == *ROLLBACK_COMPLETE* ]]; then
+            echo "Stack in $STATUS state — deleting before re-deploy..."
+            aws cloudformation delete-stack --stack-name smartcare-lambda-agents
+            aws cloudformation wait stack-delete-complete --stack-name smartcare-lambda-agents
+            echo "Deleted."
+          else
+            echo "Stack status: $STATUS — proceeding with deploy."
+          fi
+
       - name: Deploy Lambda Functions
         run: |
-          AGENT="${{ inputs.agent || 'all' }}"
           aws cloudformation deploy \
             --stack-name "smartcare-lambda-agents" \
             --template-file DevOps/AWS/infra/cfn-lambda-agents.yaml \
