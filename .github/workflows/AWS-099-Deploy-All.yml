@@ -2,10 +2,15 @@ name: "AWS-099: Deploy All"
 on:
   workflow_dispatch:
     inputs:
-      validate_vpc:
-        description: "Validate VPC"
-        type: boolean
-        default: true
+      vpc_mode:
+        description: "VPC source"
+        type: choice
+        required: true
+        default: "use_existing"
+        options:
+          - use_existing
+          - create_new
+          - skip
       create_s3:
         description: "Create S3 Bucket"
         type: boolean
@@ -22,14 +27,6 @@ on:
         description: "Create EventBridge"
         type: boolean
         default: true
-      create_opensearch:
-        description: "Create OpenSearch"
-        type: boolean
-        default: false
-      create_bedrock:
-        description: "Create Bedrock Agent"
-        type: boolean
-        default: false
       create_lambda:
         description: "Create Lambda Agents"
         type: boolean
@@ -38,6 +35,23 @@ on:
         description: "Create Step Functions"
         type: boolean
         default: true
+      create_cloudwatch:
+        description: "Create CloudWatch Monitoring (log groups, data protection, alarms, dashboard)"
+        type: boolean
+        default: true
+      generate_env:
+        description: "Generate .env file"
+        type: boolean
+        default: true
+      # --- Slow / expensive services — skipped by default ---
+      create_opensearch:
+        description: "Create OpenSearch (~20 min provision time)"
+        type: boolean
+        default: false
+      create_bedrock:
+        description: "Create Bedrock Agent"
+        type: boolean
+        default: false
       create_connect:
         description: "Create Connect"
         type: boolean
@@ -46,19 +60,19 @@ on:
         description: "Create HealthLake"
         type: boolean
         default: false
-      generate_env:
-        description: "Generate .env file"
-        type: boolean
-        default: true
 
 jobs:
-  validate-vpc:
-    if: ${{ inputs.validate_vpc }}
+  # --- VPC (always runs unless skipped) ---
+  vpc:
+    if: ${{ inputs.vpc_mode != 'skip' }}
     uses: ./.github/workflows/AWS-001-Validate-VPC.yml
+    with:
+      vpc_mode: ${{ inputs.vpc_mode }}
     secrets: inherit
 
+  # --- Core services (fast, default on) ---
   create-s3:
-    needs: [validate-vpc]
+    needs: [vpc]
     if: ${{ always() && inputs.create_s3 }}
     uses: ./.github/workflows/AWS-002-Create-S3-Bucket.yml
     secrets: inherit
@@ -80,16 +94,6 @@ jobs:
     uses: ./.github/workflows/AWS-005-Create-EventBridge.yml
     secrets: inherit
 
-  create-opensearch:
-    if: ${{ inputs.create_opensearch }}
-    uses: ./.github/workflows/AWS-006-Create-OpenSearch.yml
-    secrets: inherit
-
-  create-bedrock:
-    if: ${{ inputs.create_bedrock }}
-    uses: ./.github/workflows/AWS-007-Create-Bedrock-Agent.yml
-    secrets: inherit
-
   create-lambda:
     needs: [create-sns, create-eventbridge]
     if: ${{ always() && inputs.create_lambda }}
@@ -102,6 +106,26 @@ jobs:
     uses: ./.github/workflows/AWS-009-Create-StepFunctions.yml
     secrets: inherit
 
+  create-cloudwatch:
+    needs: [create-lambda, create-stepfunctions]
+    if: ${{ always() && inputs.create_cloudwatch }}
+    uses: ./.github/workflows/AWS-012-Create-CloudWatch.yml
+    secrets: inherit
+
+  # --- Slow / expensive services (default off) ---
+  create-opensearch:
+    needs: [vpc]
+    if: ${{ always() && inputs.create_opensearch }}
+    uses: ./.github/workflows/AWS-006-Create-OpenSearch.yml
+    with:
+      vpc_id: ${{ needs.vpc.outputs.vpc_id }}
+    secrets: inherit
+
+  create-bedrock:
+    if: ${{ inputs.create_bedrock }}
+    uses: ./.github/workflows/AWS-007-Create-Bedrock-Agent.yml
+    secrets: inherit
+
   create-connect:
     if: ${{ inputs.create_connect }}
     uses: ./.github/workflows/AWS-010-Create-Connect.yml
@@ -112,8 +136,9 @@ jobs:
     uses: ./.github/workflows/AWS-011-Create-HealthLake.yml
     secrets: inherit
 
+  # --- Generate env file (runs last, always) ---
   generate-env:
-    needs: [create-s3, create-sns, create-sqs, create-eventbridge, create-lambda, create-stepfunctions]
+    needs: [create-s3, create-sns, create-sqs, create-eventbridge, create-lambda, create-stepfunctions, create-cloudwatch, create-opensearch]
     if: ${{ always() && inputs.generate_env }}
-    uses: ./.github/workflows/AWS-012-Generate-Env-File.yml
+    uses: ./.github/workflows/AWS-013-Generate-Env-File.yml
     secrets: inherit

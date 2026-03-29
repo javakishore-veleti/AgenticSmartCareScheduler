@@ -2,6 +2,11 @@ name: "AWS-099: Destroy All"
 on:
   workflow_dispatch:
     inputs:
+      # --- Reverse order: top-level services first ---
+      destroy_cloudwatch:
+        description: "Destroy CloudWatch Monitoring"
+        type: boolean
+        default: true
       destroy_connect:
         description: "Destroy Connect"
         type: boolean
@@ -39,7 +44,11 @@ on:
         type: boolean
         default: true
       destroy_s3:
-        description: "Destroy S3 Bucket"
+        description: "Destroy S3 Bucket (data loss!)"
+        type: boolean
+        default: false
+      destroy_vpc:
+        description: "Destroy VPC (only if created by AWS-001 create_new)"
         type: boolean
         default: false
 
@@ -49,11 +58,11 @@ jobs:
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
 
-      - name: Destroy stacks (reverse order)
+      - name: Destroy stacks (reverse dependency order)
         run: |
           destroy_stack() {
             local name=$1
@@ -63,15 +72,29 @@ jobs:
             echo "  Done: $name"
           }
 
+          # Top-level first (no dependents)
+          [ "${{ inputs.destroy_cloudwatch }}" = "true" ] && destroy_stack "smartcare-cloudwatch"
           [ "${{ inputs.destroy_connect }}" = "true" ] && destroy_stack "smartcare-connect"
           [ "${{ inputs.destroy_healthlake }}" = "true" ] && destroy_stack "smartcare-healthlake"
+
+          # Orchestration layer
           [ "${{ inputs.destroy_stepfunctions }}" = "true" ] && destroy_stack "smartcare-step-functions"
+
+          # Compute layer
           [ "${{ inputs.destroy_lambda }}" = "true" ] && destroy_stack "smartcare-lambda-agents"
           [ "${{ inputs.destroy_bedrock }}" = "true" ] && destroy_stack "smartcare-bedrock-agent"
+
+          # Data layer
           [ "${{ inputs.destroy_opensearch }}" = "true" ] && destroy_stack "smartcare-opensearch"
+
+          # Messaging layer
           [ "${{ inputs.destroy_eventbridge }}" = "true" ] && destroy_stack "smartcare-eventbridge"
           [ "${{ inputs.destroy_sqs }}" = "true" ] && destroy_stack "smartcare-sqs-queues"
           [ "${{ inputs.destroy_sns }}" = "true" ] && destroy_stack "smartcare-sns-topics"
-          [ "${{ inputs.destroy_s3 }}" = "true" ] && destroy_stack "smartcare-s3-bucket"
 
+          # Foundation (default off — destructive)
+          [ "${{ inputs.destroy_s3 }}" = "true" ] && destroy_stack "smartcare-s3-bucket"
+          [ "${{ inputs.destroy_vpc }}" = "true" ] && destroy_stack "smartcare-vpc"
+
+          echo ""
           echo "All selected stacks destroyed."

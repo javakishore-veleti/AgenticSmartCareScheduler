@@ -1,4 +1,4 @@
-name: "AWS-004: Create EventBridge"
+name: "AWS-012: Create CloudWatch Monitoring"
 on:
   workflow_dispatch:
   workflow_call:
@@ -14,10 +14,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
 
-      - name: Deploy EventBridge
+      - name: Deploy CloudWatch Monitoring
         run: |
           aws cloudformation deploy \
-            --stack-name "smartcare-eventbridge" \
-            --template-file infra/cfn-eventbridge.yaml \
+            --stack-name "smartcare-cloudwatch" \
+            --template-file infra/cfn-cloudwatch.yaml \
             --capabilities CAPABILITY_IAM \
             --no-fail-on-empty-changeset
+          echo "CloudWatch log groups, dashboard, and alarms deployed."

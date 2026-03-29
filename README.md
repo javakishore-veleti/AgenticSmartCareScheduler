@@ -29,6 +29,33 @@ Five specialized AI agents coordinate through AWS Step Functions to infer patien
 - **Orchestration**: AWS Step Functions, Amazon EventBridge
 - **IaC**: AWS CloudFormation, GitHub Actions
 
+## GitHub Secrets Setup
+
+The AWS deployment workflows require secrets configured in the GitHub repository. A helper script reads values from environment variables on your machine and pushes them via `gh secret set`.
+
+```bash
+# 1. Export required secrets
+export AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID="..."
+export AGENTIC_SCS_AWS_SECRET_ACCESS_KEY="..."
+export AGENTIC_SCS_AES_ENCRYPTION_KEY="..."
+export AGENTIC_SCS_ENCRYPTION_KEY="..."
+export AGENTIC_SCS_JWT_SIGNING_KEY="..."
+export AGENTIC_SCS_OPENSEARCH_MASTER_PASSWORD="..."
+export AGENTIC_SCS_RDS_MASTER_PASSWORD="..."
+export AGENTIC_SCS_REDIS_AUTH_TOKEN="..."
+
+# 2. Optional — only if using an existing VPC (select "use_existing" in AWS-001)
+#    If you select "create_new", the VPC is created by CloudFormation and
+#    the ID is passed to downstream workflows automatically.
+export AGENTIC_SCS_AWS_REGION="us-east-1"
+export AGENTIC_SCS_AWS_VPC_ID="vpc-..."
+
+# 3. Push to GitHub (requires gh CLI authenticated)
+npm run github:repo:secrets:push
+```
+
+The script exits with an error if any required secrets are missing, and notes which optional ones were skipped.
+
 ## Author
 
 Aruna Kishore Veleti, Senior Member, IEEE

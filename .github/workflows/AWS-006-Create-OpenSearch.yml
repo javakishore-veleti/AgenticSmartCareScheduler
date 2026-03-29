@@ -1,0 +1,48 @@
+name: "AWS-006: Create OpenSearch"
+on:
+  workflow_dispatch:
+    inputs:
+      vpc_id:
+        description: "VPC ID for OpenSearch (leave empty to deploy without VPC)"
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      vpc_id:
+        description: "VPC ID for OpenSearch"
+        type: string
+        default: ""
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+
+      - name: Deploy OpenSearch Domain
+        run: |
+          VPC_ID="${{ inputs.vpc_id }}"
+          MASTER_PWD="${{ secrets.AGENTIC_SCS_OPENSEARCH_MASTER_PASSWORD }}"
+          PARAMS="--parameter-overrides"
+          if [ -n "$VPC_ID" ]; then
+            echo "Deploying OpenSearch in VPC: $VPC_ID"
+            PARAMS="$PARAMS VpcId=$VPC_ID"
+          else
+            echo "Deploying OpenSearch without VPC (public access)"
+          fi
+          if [ -n "$MASTER_PWD" ]; then
+            PARAMS="$PARAMS MasterUserPassword=$MASTER_PWD"
+          fi
+
+          aws cloudformation deploy \
+            --stack-name "smartcare-opensearch" \
+            --template-file infra/cfn-opensearch.yaml \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            $PARAMS
+          echo "NOTE: OpenSearch takes 15-20 min to provision"

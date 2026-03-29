@@ -1,29 +1,49 @@
-name: "AWS-001: Validate VPC"
+name: "AWS-001: VPC — Validate or Create"
 on:
   workflow_dispatch:
+    inputs:
+      vpc_mode:
+        description: "VPC source"
+        type: choice
+        required: true
+        default: "use_existing"
+        options:
+          - use_existing
+          - create_new
   workflow_call:
+    inputs:
+      vpc_mode:
+        description: "VPC source: use_existing or create_new"
+        type: string
+        default: "use_existing"
     outputs:
       vpc_valid:
-        description: "Whether the VPC is valid"
-        value: ${{ jobs.validate.outputs.vpc_valid }}
+        description: "Whether a valid VPC is available"
+        value: ${{ jobs.vpc.outputs.vpc_valid }}
+      vpc_id:
+        description: "The VPC ID to use downstream"
+        value: ${{ jobs.vpc.outputs.vpc_id }}
 
 jobs:
-  validate:
+  vpc:
     runs-on: ubuntu-latest
     outputs:
-      vpc_valid: ${{ steps.check.outputs.valid }}
+      vpc_valid: ${{ steps.result.outputs.valid }}
+      vpc_id: ${{ steps.result.outputs.vpc_id }}
     steps:
+      - uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
 
-      - name: Validate VPC
-        id: check
+      - name: Use existing VPC from GitHub secret
+        id: existing
+        if: ${{ inputs.vpc_mode == 'use_existing' }}
         run: |
-          VPC_ID="${{ secrets.AWS_VPC_ID }}"
+          VPC_ID="${{ secrets.AGENTIC_SCS_AWS_VPC_ID }}"
           if [ -z "$VPC_ID" ]; then
             echo "ERROR: AWS_VPC_ID secret not set"
             echo "valid=false" >> $GITHUB_OUTPUT
@@ -34,8 +54,8 @@ jobs:
           if [ "$VPC_STATE" = "available" ]; then
             echo "VPC $VPC_ID is valid and available"
             echo "valid=true" >> $GITHUB_OUTPUT
+            echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
 
-            # Print VPC details
             aws ec2 describe-vpcs --vpc-ids "$VPC_ID" --output table
             echo ""
             echo "Subnets:"
@@ -44,4 +64,45 @@ jobs:
             echo "ERROR: VPC $VPC_ID not found or not available (state: $VPC_STATE)"
             echo "valid=false" >> $GITHUB_OUTPUT
             exit 1
+          fi
+
+      - name: Create new VPC via CloudFormation
+        id: create
+        if: ${{ inputs.vpc_mode == 'create_new' }}
+        run: |
+          echo "Creating new VPC via CloudFormation..."
+          aws cloudformation deploy \
+            --stack-name "smartcare-vpc" \
+            --template-file infra/cfn-vpc.yaml \
+            --no-fail-on-empty-changeset
+
+          VPC_ID=$(aws cloudformation describe-stacks \
+            --stack-name smartcare-vpc \
+            --query 'Stacks[0].Outputs[?OutputKey==`VpcId`].OutputValue' \
+            --output text)
+
+          if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
+            echo "ERROR: Failed to create VPC"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "Created VPC: $VPC_ID"
+          echo "valid=true" >> $GITHUB_OUTPUT
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+
+          aws ec2 describe-vpcs --vpc-ids "$VPC_ID" --output table
+          echo ""
+          echo "Subnets:"
+          aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query 'Subnets[*].[SubnetId,AvailabilityZone,CidrBlock]' --output table
+
+      - name: Set outputs
+        id: result
+        run: |
+          if [ "${{ inputs.vpc_mode }}" = "create_new" ]; then
+            echo "valid=${{ steps.create.outputs.valid }}" >> $GITHUB_OUTPUT
+            echo "vpc_id=${{ steps.create.outputs.vpc_id }}" >> $GITHUB_OUTPUT
+          else
+            echo "valid=${{ steps.existing.outputs.valid }}" >> $GITHUB_OUTPUT
+            echo "vpc_id=${{ steps.existing.outputs.vpc_id }}" >> $GITHUB_OUTPUT
           fi

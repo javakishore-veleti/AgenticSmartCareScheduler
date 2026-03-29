@@ -1,0 +1,533 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  SmartCare - CloudWatch observability stack with data protection for PHI/PII,
+  Infrequent Access log class for audit/compliance, OpenSearch PPL/SQL queryable
+  log groups, dashboard, and alarms for all microservices.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  # ================================================================
+  # Log Groups — Standard class (operational, high-frequency agents)
+  # ================================================================
+  # PCA, COA, PSA, RRA are invoked on every outreach cycle — Standard
+  # class supports Logs Insights, OpenSearch PPL, and OpenSearch SQL.
+
+  PCALogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/smartcare-pca-${Environment}
+      LogGroupClass: STANDARD
+      RetentionInDays: 14
+      Tags:
+        - Key: Agent
+          Value: PCA
+        - Key: Project
+          Value: SmartCare
+
+  COALogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/smartcare-coa-${Environment}
+      LogGroupClass: STANDARD
+      RetentionInDays: 14
+      Tags:
+        - Key: Agent
+          Value: COA
+        - Key: Project
+          Value: SmartCare
+
+  PSALogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/smartcare-psa-${Environment}
+      LogGroupClass: STANDARD
+      RetentionInDays: 14
+      Tags:
+        - Key: Agent
+          Value: PSA
+        - Key: Project
+          Value: SmartCare
+
+  RRALogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/smartcare-rra-${Environment}
+      LogGroupClass: STANDARD
+      RetentionInDays: 14
+      Tags:
+        - Key: Agent
+          Value: RRA
+        - Key: Project
+          Value: SmartCare
+
+  StepFunctionsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/states/smartcare-outreach-${Environment}
+      LogGroupClass: STANDARD
+      RetentionInDays: 14
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  # ================================================================
+  # Log Groups — Infrequent Access class (audit, forensic analysis)
+  # ================================================================
+  # ACA (Audit & Compliance Agent) logs are queried occasionally for
+  # forensic investigations and compliance reviews. IA class provides
+  # lower ingestion cost and now supports data protection + OpenSearch
+  # PPL/SQL analytics.
+
+  ACALogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/smartcare-aca-${Environment}
+      LogGroupClass: INFREQUENT_ACCESS
+      RetentionInDays: 365
+      Tags:
+        - Key: Agent
+          Value: ACA
+        - Key: Project
+          Value: SmartCare
+
+  # Outreach audit trail — immutable log of all patient outreach decisions.
+  # Queried during compliance reviews and incident investigations.
+  OutreachAuditLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /smartcare/audit/outreach-decisions-${Environment}
+      LogGroupClass: INFREQUENT_ACCESS
+      RetentionInDays: 2557  # 7 years — HIPAA retention requirement
+      Tags:
+        - Key: Purpose
+          Value: HIPAA-Audit-Trail
+        - Key: Project
+          Value: SmartCare
+
+  # Data protection audit findings — logs where PHI was detected and masked.
+  DataProtectionAuditLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /smartcare/audit/data-protection-findings-${Environment}
+      LogGroupClass: INFREQUENT_ACCESS
+      RetentionInDays: 2557
+      Tags:
+        - Key: Purpose
+          Value: Data-Protection-Audit
+        - Key: Project
+          Value: SmartCare
+
+  # ================================================================
+  # Data Protection Policy — auto-detect and mask PHI/PII in logs
+  # ================================================================
+  # Healthcare agents log patient context, risk scores, and outreach
+  # decisions. This policy detects and masks sensitive data patterns
+  # (SSN, names, addresses, health data) across all agent log groups.
+  # Audit findings are sent to the data protection audit log group.
+
+  DataProtectionPolicy:
+    Type: AWS::Logs::AccountPolicy
+    Properties:
+      PolicyName: !Sub smartcare-data-protection-${Environment}
+      PolicyType: DATA_PROTECTION_POLICY
+      PolicyDocument: !Sub |
+        {
+          "Name": "SmartCareDataProtection",
+          "Description": "Detect and mask PHI/PII in healthcare agent logs",
+          "Version": "2021-06-01",
+          "Configuration": {
+            "CustomDataIdentifier": [
+              {
+                "Name": "PatientId",
+                "Regex": "patient[_-]?id[\":\\s]*[A-Fa-f0-9\\-]{8,36}"
+              },
+              {
+                "Name": "AppointmentId",
+                "Regex": "appointment[_-]?id[\":\\s]*[A-Fa-f0-9\\-]{8,36}"
+              },
+              {
+                "Name": "RiskScore",
+                "Regex": "risk[_-]?score[\":\\s]*0\\.\\d+"
+              }
+            ],
+            "DataIdentifier": [
+              "arn:aws:dataprotection::aws:data-identifier/Name",
+              "arn:aws:dataprotection::aws:data-identifier/EmailAddress",
+              "arn:aws:dataprotection::aws:data-identifier/PhoneNumber",
+              "arn:aws:dataprotection::aws:data-identifier/Address",
+              "arn:aws:dataprotection::aws:data-identifier/SsnUs",
+              "arn:aws:dataprotection::aws:data-identifier/DateOfBirth",
+              "arn:aws:dataprotection::aws:data-identifier/DriversLicense-US",
+              "arn:aws:dataprotection::aws:data-identifier/HealthInsuranceCardNumber-EU",
+              "arn:aws:dataprotection::aws:data-identifier/HealthInsuranceClaimNumber-US"
+            ]
+          },
+          "Statement": [
+            {
+              "Sid": "audit-policy",
+              "DataIdentifier": [
+                "arn:aws:dataprotection::aws:data-identifier/Name",
+                "arn:aws:dataprotection::aws:data-identifier/EmailAddress",
+                "arn:aws:dataprotection::aws:data-identifier/PhoneNumber",
+                "arn:aws:dataprotection::aws:data-identifier/Address",
+                "arn:aws:dataprotection::aws:data-identifier/SsnUs",
+                "arn:aws:dataprotection::aws:data-identifier/DateOfBirth",
+                "arn:aws:dataprotection::aws:data-identifier/DriversLicense-US",
+                "arn:aws:dataprotection::aws:data-identifier/HealthInsuranceCardNumber-EU",
+                "arn:aws:dataprotection::aws:data-identifier/HealthInsuranceClaimNumber-US"
+              ],
+              "CustomDataIdentifier": [
+                {"Name": "PatientId"},
+                {"Name": "AppointmentId"},
+                {"Name": "RiskScore"}
+              ],
+              "Operation": {
+                "Audit": {
+                  "FindingsDestination": {
+                    "CloudWatchLogs": {
+                      "LogGroup": "/smartcare/audit/data-protection-findings-${Environment}"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "redact-policy",
+              "DataIdentifier": [
+                "arn:aws:dataprotection::aws:data-identifier/Name",
+                "arn:aws:dataprotection::aws:data-identifier/EmailAddress",
+                "arn:aws:dataprotection::aws:data-identifier/PhoneNumber",
+                "arn:aws:dataprotection::aws:data-identifier/Address",
+                "arn:aws:dataprotection::aws:data-identifier/SsnUs",
+                "arn:aws:dataprotection::aws:data-identifier/DateOfBirth",
+                "arn:aws:dataprotection::aws:data-identifier/DriversLicense-US",
+                "arn:aws:dataprotection::aws:data-identifier/HealthInsuranceCardNumber-EU",
+                "arn:aws:dataprotection::aws:data-identifier/HealthInsuranceClaimNumber-US"
+              ],
+              "CustomDataIdentifier": [
+                {"Name": "PatientId"},
+                {"Name": "AppointmentId"},
+                {"Name": "RiskScore"}
+              ],
+              "Operation": {
+                "Deidentify": {
+                  "MaskConfig": {}
+                }
+              }
+            }
+          ]
+        }
+      Scope: ALL
+
+  # ================================================================
+  # Field Index Policies — optimize PPL/SQL queries on agent logs
+  # ================================================================
+  # Field indexes reduce query scan volume by indexing commonly queried
+  # fields. PPL queries can use aws:fieldIndex to scan only indexed data.
+  #
+  # Example PPL query with field index:
+  #   source = [`aws:fieldIndex`="context_state", `context_state` = "REACHABLE_MOBILE"]
+  #   | where risk_score > 0.65
+  #   | fields patient_id, context_state, risk_score, channel
+  #   | head 100
+
+  AgentLogFieldIndexPolicy:
+    Type: AWS::Logs::AccountPolicy
+    Properties:
+      PolicyName: !Sub smartcare-field-indexes-${Environment}
+      PolicyType: FIELD_INDEX_POLICY
+      PolicyDocument: !Sub |
+        {
+          "Fields": [
+            "context_state",
+            "risk_score",
+            "channel",
+            "agent",
+            "action",
+            "patient_id",
+            "appointment_id",
+            "status"
+          ]
+        }
+      Scope: ALL
+
+  # ================================================================
+  # SNS Topic for Alarms
+  # ================================================================
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub smartcare-cloudwatch-alarms-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+
+  # ================================================================
+  # Lambda Error Alarms
+  # ================================================================
+  PCAErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub smartcare-pca-errors-${Environment}
+      AlarmDescription: PCA Lambda errors exceed threshold
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub smartcare-pca-${Environment}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  COAErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub smartcare-coa-errors-${Environment}
+      AlarmDescription: COA Lambda errors exceed threshold
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub smartcare-coa-${Environment}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  # ================================================================
+  # SQS DLQ Alarms
+  # ================================================================
+  WorkflowEventsDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub smartcare-workflow-events-dlq-${Environment}
+      AlarmDescription: Messages landing in workflow events dead-letter queue
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Sub smartcare-workflow-events-dlq-${Environment}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  OutreachResultsDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub smartcare-outreach-results-dlq-${Environment}
+      AlarmDescription: Messages landing in outreach results dead-letter queue
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Sub smartcare-outreach-results-dlq-${Environment}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  # ================================================================
+  # Step Functions Failure Alarm
+  # ================================================================
+  StepFunctionsFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub smartcare-stepfn-failures-${Environment}
+      AlarmDescription: Step Functions execution failures
+      Namespace: AWS/States
+      MetricName: ExecutionsFailed
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !ImportValue
+            !Sub smartcare-${Environment}-state-machine-arn
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  # ================================================================
+  # Data Protection Findings Alarm
+  # ================================================================
+  # Alerts when PHI/PII is detected in agent logs — indicates potential
+  # logging hygiene issues that need developer attention.
+  DataProtectionFindingsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub smartcare-data-protection-findings-${Environment}
+      AlarmDescription: PHI/PII detected in agent logs — review logging practices
+      Namespace: AWS/Logs
+      MetricName: DataProtectionFindingsCount
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 50
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  # ================================================================
+  # Dashboard
+  # ================================================================
+  SmartCareDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub SmartCare-${Environment}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "Lambda Invocations (All Agents)",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "smartcare-pca-${Environment}", {"label": "PCA"}],
+                  ["...", "smartcare-coa-${Environment}", {"label": "COA"}],
+                  ["...", "smartcare-psa-${Environment}", {"label": "PSA"}],
+                  ["...", "smartcare-rra-${Environment}", {"label": "RRA"}],
+                  ["...", "smartcare-aca-${Environment}", {"label": "ACA"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "Lambda Errors (All Agents)",
+                "metrics": [
+                  ["AWS/Lambda", "Errors", "FunctionName", "smartcare-pca-${Environment}", {"label": "PCA"}],
+                  ["...", "smartcare-coa-${Environment}", {"label": "COA"}],
+                  ["...", "smartcare-psa-${Environment}", {"label": "PSA"}],
+                  ["...", "smartcare-rra-${Environment}", {"label": "RRA"}],
+                  ["...", "smartcare-aca-${Environment}", {"label": "ACA"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "Lambda Duration (p99)",
+                "metrics": [
+                  ["AWS/Lambda", "Duration", "FunctionName", "smartcare-pca-${Environment}", {"label": "PCA", "stat": "p99"}],
+                  ["...", "smartcare-coa-${Environment}", {"label": "COA", "stat": "p99"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "Step Functions Executions",
+                "metrics": [
+                  ["AWS/States", "ExecutionsStarted", "StateMachineArn", "${SmartCareStateMachineArn}", {"label": "Started"}],
+                  ["AWS/States", "ExecutionsSucceeded", "StateMachineArn", "${SmartCareStateMachineArn}", {"label": "Succeeded"}],
+                  ["AWS/States", "ExecutionsFailed", "StateMachineArn", "${SmartCareStateMachineArn}", {"label": "Failed"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 12, "width": 12, "height": 6,
+              "properties": {
+                "title": "SQS Queue Depth",
+                "metrics": [
+                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "smartcare-workflow-events-${Environment}", {"label": "Workflow Events"}],
+                  ["...", "smartcare-outreach-results-${Environment}", {"label": "Outreach Results"}],
+                  ["...", "smartcare-admin-alerts-${Environment}", {"label": "Admin Alerts"}]
+                ],
+                "period": 60,
+                "stat": "Average",
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 12, "width": 12, "height": 6,
+              "properties": {
+                "title": "SQS Dead-Letter Queue Depth",
+                "metrics": [
+                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "smartcare-workflow-events-dlq-${Environment}", {"label": "Workflow DLQ"}],
+                  ["...", "smartcare-outreach-results-dlq-${Environment}", {"label": "Outreach DLQ"}],
+                  ["...", "smartcare-admin-alerts-dlq-${Environment}", {"label": "Admin DLQ"}]
+                ],
+                "period": 60,
+                "stat": "Average",
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 18, "width": 24, "height": 6,
+              "properties": {
+                "title": "Agent Outreach Decisions (OpenSearch PPL)",
+                "query": "source = [`aws:fieldIndex`=\"context_state\"] | stats count() by context_state, channel | sort -count()",
+                "region": "${AWS::Region}",
+                "stacked": false,
+                "view": "table"
+              }
+            }
+          ]
+        }
+
+  # SSM parameter for dashboard URL (used by env file generator)
+  SmartCareStateMachineArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /smartcare/${Environment}/cloudwatch-dashboard
+      Type: String
+      Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=SmartCare-${Environment}
+
+Outputs:
+  DashboardName:
+    Value: !Sub SmartCare-${Environment}
+    Export:
+      Name: !Sub smartcare-${Environment}-cloudwatch-dashboard
+  DashboardUrl:
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=SmartCare-${Environment}
+  AlarmTopicArn:
+    Value: !Ref AlarmNotificationTopic
+    Export:
+      Name: !Sub smartcare-${Environment}-alarm-topic
+  StepFunctionsLogGroupArn:
+    Value: !GetAtt StepFunctionsLogGroup.Arn
+    Export:
+      Name: !Sub smartcare-${Environment}-stepfn-log-group-arn
+  AuditLogGroupName:
+    Value: !Ref OutreachAuditLogGroup
+    Description: Outreach audit trail log group (IA class, 7-year retention)
+  DataProtectionAuditLogGroupName:
+    Value: !Ref DataProtectionAuditLogGroup
+    Description: Data protection findings log group (IA class)

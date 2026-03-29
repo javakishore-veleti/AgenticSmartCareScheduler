@@ -5,6 +5,11 @@ Parameters:
   Environment:
     Type: String
     Default: dev
+  EncryptionKey:
+    Type: String
+    Description: AES encryption key for agent data at rest
+    NoEcho: true
+    Default: ''
 
 Resources:
   AgentExecutionRole:
@@ -20,6 +25,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
       Policies:
         - PolicyName: SmartCareAgentPolicy
           PolicyDocument:
@@ -58,6 +64,13 @@ Resources:
                 Action:
                   - sqs:SendMessage
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: SmartCare
 
   PCAFunction:
     Type: AWS::Lambda::Function
@@ -72,6 +85,7 @@ Resources:
         Variables:
           ENVIRONMENT: !Ref Environment
           BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+          ENCRYPTION_KEY: !Ref EncryptionKey
       Tags:
         - Key: Agent
           Value: PCA
@@ -134,8 +148,10 @@ Resources:
       MemorySize: 256
       Environment:
         Variables:
+          ENVIRONMENT: !Ref Environment
           OPENSEARCH_ENDPOINT: !ImportValue
             !Sub smartcare-${Environment}-opensearch-endpoint
+          ENCRYPTION_KEY: !Ref EncryptionKey
       Tags:
         - Key: Agent
           Value: ACA

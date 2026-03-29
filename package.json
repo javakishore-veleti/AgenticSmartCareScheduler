@@ -61,6 +61,8 @@
     "scenario:run": "gh workflow run run-scenario.yml",
     "analytics:extract": "gh workflow run extract-analytics.yml",
 
+    "github:repo:secrets:push": "bash .github/scripts/set-github-secrets.sh",
+
     "all": "npm run install:all && npm run build:all && npm run test:all"
   },
   "devDependencies": {

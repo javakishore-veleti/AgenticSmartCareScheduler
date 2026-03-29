@@ -7,7 +7,16 @@ Parameters:
     Default: dev
   VpcId:
     Type: String
-    Description: VPC ID for OpenSearch
+    Description: VPC ID for OpenSearch (optional — leave empty for public access)
+    Default: ''
+  MasterUserPassword:
+    Type: String
+    Description: Master user password for OpenSearch fine-grained access control
+    NoEcho: true
+    Default: ''
+
+Conditions:
+  HasMasterPassword: !Not [!Equals [!Ref MasterUserPassword, '']]
 
 Resources:
   OpenSearchDomain:
@@ -23,6 +32,21 @@ Resources:
         EBSEnabled: true
         VolumeType: gp3
         VolumeSize: 20
+      AdvancedSecurityOptions:
+        !If
+          - HasMasterPassword
+          - Enabled: true
+            InternalUserDatabaseEnabled: true
+            MasterUserOptions:
+              MasterUserName: smartcare_admin
+              MasterUserPassword: !Ref MasterUserPassword
+          - !Ref AWS::NoValue
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      EncryptionAtRestOptions:
+        Enabled: true
+      DomainEndpointOptions:
+        EnforceHTTPS: true
       AccessPolicies:
         Version: '2012-10-17'
         Statement:

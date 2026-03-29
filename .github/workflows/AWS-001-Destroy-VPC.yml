@@ -1,23 +1,20 @@
-name: "AWS-004: Create EventBridge"
+name: "AWS-001: Destroy VPC"
 on:
   workflow_dispatch:
-  workflow_call:
 
 jobs:
-  create:
+  destroy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
 
-      - name: Deploy EventBridge
+      - name: Destroy VPC stack
         run: |
-          aws cloudformation deploy \
-            --stack-name "smartcare-eventbridge" \
-            --template-file infra/cfn-eventbridge.yaml \
-            --capabilities CAPABILITY_IAM \
-            --no-fail-on-empty-changeset
+          echo "Destroying smartcare-vpc stack..."
+          aws cloudformation delete-stack --stack-name "smartcare-vpc" 2>/dev/null || echo "Stack not found"
+          aws cloudformation wait stack-delete-complete --stack-name "smartcare-vpc" 2>/dev/null || true
+          echo "Done."
