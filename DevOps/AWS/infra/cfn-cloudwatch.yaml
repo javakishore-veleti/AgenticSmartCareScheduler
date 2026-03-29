@@ -10,105 +10,14 @@ Parameters:
 
 Resources:
   # ================================================================
-  # Log Groups — Standard class (operational, high-frequency agents)
+  # NOTE: Lambda and Step Functions log groups are NOT managed here.
+  # They are auto-created by the services themselves. This template
+  # only creates custom audit log groups that don't exist elsewhere.
   # ================================================================
-  PCALogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/smartcare-pca-${Environment}
-      LogGroupClass: STANDARD
-      RetentionInDays: 14
-      Tags:
-        - Key: Agent
-          Value: PCA
-        - Key: Project
-          Value: SmartCare
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Component
-          Value: CloudWatch
-
-  COALogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/smartcare-coa-${Environment}
-      LogGroupClass: STANDARD
-      RetentionInDays: 14
-      Tags:
-        - Key: Agent
-          Value: COA
-        - Key: Project
-          Value: SmartCare
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Component
-          Value: CloudWatch
-
-  PSALogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/smartcare-psa-${Environment}
-      LogGroupClass: STANDARD
-      RetentionInDays: 14
-      Tags:
-        - Key: Agent
-          Value: PSA
-        - Key: Project
-          Value: SmartCare
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Component
-          Value: CloudWatch
-
-  RRALogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/smartcare-rra-${Environment}
-      LogGroupClass: STANDARD
-      RetentionInDays: 14
-      Tags:
-        - Key: Agent
-          Value: RRA
-        - Key: Project
-          Value: SmartCare
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Component
-          Value: CloudWatch
-
-  StepFunctionsLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/states/smartcare-outreach-${Environment}
-      LogGroupClass: STANDARD
-      RetentionInDays: 14
-      Tags:
-        - Key: Project
-          Value: SmartCare
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Component
-          Value: CloudWatch
 
   # ================================================================
   # Log Groups — Infrequent Access class (audit, forensic analysis)
   # ================================================================
-  ACALogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/smartcare-aca-${Environment}
-      LogGroupClass: INFREQUENT_ACCESS
-      RetentionInDays: 365
-      Tags:
-        - Key: Agent
-          Value: ACA
-        - Key: Project
-          Value: SmartCare
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Component
-          Value: CloudWatch
-
   OutreachAuditLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -354,10 +263,6 @@ Outputs:
     Value: !Ref AlarmNotificationTopic
     Export:
       Name: !Sub smartcare-${Environment}-alarm-topic
-  StepFunctionsLogGroupArn:
-    Value: !GetAtt StepFunctionsLogGroup.Arn
-    Export:
-      Name: !Sub smartcare-${Environment}-stepfn-log-group-arn
   AuditLogGroupName:
     Value: !Ref OutreachAuditLogGroup
     Description: Outreach audit trail log group (IA class, 7-year retention)
