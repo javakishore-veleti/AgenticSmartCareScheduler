@@ -62,6 +62,7 @@
     "analytics:extract": "gh workflow run extract-analytics.yml",
 
     "github:repo:secrets:push": "bash .github/scripts/set-github-secrets.sh",
+    "aws:stacks:cancel": "bash .github/scripts/aws-stacks-cancel.sh",
 
     "all": "npm run install:all && npm run build:all && npm run test:all"
   },
