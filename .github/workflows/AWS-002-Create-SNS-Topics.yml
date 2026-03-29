@@ -18,8 +18,8 @@ jobs:
       outreach_result_topic_arn: ${{ steps.deploy.outputs.outreach_result_topic_arn }}
       admin_alert_topic_arn: ${{ steps.deploy.outputs.admin_alert_topic_arn }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
