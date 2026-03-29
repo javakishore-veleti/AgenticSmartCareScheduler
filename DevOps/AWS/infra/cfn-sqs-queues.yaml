@@ -19,11 +19,22 @@ Resources:
       Tags:
         - Key: Project
           Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: SQS
 
   WorkflowEventsDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub smartcare-workflow-events-dlq-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: SQS
 
   OutreachResultsQueue:
     Type: AWS::SQS::Queue
@@ -37,11 +48,22 @@ Resources:
       Tags:
         - Key: Project
           Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: SQS
 
   OutreachResultsDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub smartcare-outreach-results-dlq-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: SQS
 
   AdminAlertsQueue:
     Type: AWS::SQS::Queue
@@ -55,11 +77,22 @@ Resources:
       Tags:
         - Key: Project
           Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: SQS
 
   AdminAlertsDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub smartcare-admin-alerts-dlq-${Environment}
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: SQS
 
 Outputs:
   WorkflowEventsQueueUrl:

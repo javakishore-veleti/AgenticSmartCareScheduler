@@ -25,7 +25,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
       Policies:
         - PolicyName: SmartCareAgentPolicy
           PolicyDocument:
@@ -71,6 +70,13 @@ Resources:
                 Condition:
                   StringEquals:
                     cloudwatch:namespace: SmartCare
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: Lambda
 
   PCAFunction:
     Type: AWS::Lambda::Function
@@ -91,6 +97,10 @@ Resources:
           Value: PCA
         - Key: Project
           Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: Lambda
 
   COAFunction:
     Type: AWS::Lambda::Function
@@ -110,6 +120,12 @@ Resources:
       Tags:
         - Key: Agent
           Value: COA
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: Lambda
 
   PSAFunction:
     Type: AWS::Lambda::Function
@@ -123,6 +139,12 @@ Resources:
       Tags:
         - Key: Agent
           Value: PSA
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: Lambda
 
   RRAFunction:
     Type: AWS::Lambda::Function
@@ -136,6 +158,12 @@ Resources:
       Tags:
         - Key: Agent
           Value: RRA
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: Lambda
 
   ACAFunction:
     Type: AWS::Lambda::Function
@@ -155,6 +183,12 @@ Resources:
       Tags:
         - Key: Agent
           Value: ACA
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: Lambda
 
 Outputs:
   PCAFunctionArn:

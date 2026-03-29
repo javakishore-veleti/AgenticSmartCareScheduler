@@ -58,6 +58,10 @@ Resources:
       Tags:
         - Key: Project
           Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: OpenSearch
 
 Outputs:
   DomainEndpoint:

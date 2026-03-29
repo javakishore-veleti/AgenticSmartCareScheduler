@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: SmartCare - Step Functions state machine for PCA→COA→PSA→RRA→ACA pipeline
+Description: SmartCare - Step Functions state machine for PCA→COA outreach pipeline
 
 Parameters:
   Environment:
@@ -45,12 +45,26 @@ Resources:
                   - logs:DescribeResourcePolicies
                   - logs:DescribeLogGroups
                 Resource: '*'
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: StepFunctions
 
   StepFunctionsLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/states/smartcare-outreach-${Environment}
       RetentionInDays: 14
+      Tags:
+        - Key: Project
+          Value: SmartCare
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: StepFunctions
 
   OutreachStateMachine:
     Type: AWS::StepFunctions::StateMachine
@@ -63,87 +77,88 @@ Resources:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn: !GetAtt StepFunctionsLogGroup.Arn
-      DefinitionString: !Sub |
-        {
-          "Comment": "SmartCare PCA→COA outreach pipeline for one patient",
-          "StartAt": "PCA_AssessContext",
-          "States": {
-            "PCA_AssessContext": {
-              "Type": "Task",
-              "Resource": "${PCAFunctionArn}",
-              "Parameters": {
-                "patient.$": "$.patient",
-                "signals.$": "$.signals"
-              },
-              "ResultPath": "$.pca_output",
-              "Next": "CheckPCASkip"
-            },
-            "CheckPCASkip": {
-              "Type": "Choice",
-              "Choices": [
-                {
-                  "Variable": "$.pca_output.action",
-                  "StringEquals": "SKIPPED",
-                  "Next": "RecordSkipped"
+      DefinitionString:
+        Fn::Sub:
+          - |
+            {
+              "Comment": "SmartCare PCA->COA outreach pipeline for one patient",
+              "StartAt": "PCA_AssessContext",
+              "States": {
+                "PCA_AssessContext": {
+                  "Type": "Task",
+                  "Resource": "${PcaArn}",
+                  "Parameters": {
+                    "patient.$": "$.patient",
+                    "signals.$": "$.signals"
+                  },
+                  "ResultPath": "$.pca_output",
+                  "Next": "CheckPCASkip"
+                },
+                "CheckPCASkip": {
+                  "Type": "Choice",
+                  "Choices": [
+                    {
+                      "Variable": "$.pca_output.action",
+                      "StringEquals": "SKIPPED",
+                      "Next": "RecordSkipped"
+                    }
+                  ],
+                  "Default": "COA_SelectAndExecute"
+                },
+                "COA_SelectAndExecute": {
+                  "Type": "Task",
+                  "Resource": "${CoaArn}",
+                  "Parameters": {
+                    "pca_result.$": "$.pca_output.pca_result",
+                    "patient.$": "$.patient"
+                  },
+                  "ResultPath": "$.coa_output",
+                  "Next": "PublishResult"
+                },
+                "RecordSkipped": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::events:putEvents",
+                  "Parameters": {
+                    "Entries": [{
+                      "Source": "smartcare.agents.coa",
+                      "DetailType": "OutreachCompleted",
+                      "Detail": {
+                        "patient_id.$": "$.patient.patient_id",
+                        "action": "SKIPPED",
+                        "reason.$": "$.pca_output.reason"
+                      }
+                    }]
+                  },
+                  "End": true
+                },
+                "PublishResult": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::events:putEvents",
+                  "Parameters": {
+                    "Entries": [{
+                      "Source": "smartcare.agents.coa",
+                      "DetailType": "OutreachCompleted",
+                      "Detail": {
+                        "patient_id.$": "$.patient.patient_id",
+                        "coa_result.$": "$.coa_output.coa_result"
+                      }
+                    }]
+                  },
+                  "End": true
                 }
-              ],
-              "Default": "COA_SelectAndExecute"
-            },
-            "COA_SelectAndExecute": {
-              "Type": "Task",
-              "Resource": "${COAFunctionArn}",
-              "Parameters": {
-                "pca_result.$": "$.pca_output.pca_result",
-                "patient.$": "$.patient"
-              },
-              "ResultPath": "$.coa_output",
-              "Next": "PublishResult"
-            },
-            "RecordSkipped": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::events:putEvents",
-              "Parameters": {
-                "Entries": [{
-                  "Source": "smartcare.agents.coa",
-                  "DetailType": "OutreachCompleted",
-                  "Detail": {
-                    "patient_id.$": "$.patient.patient_id",
-                    "action": "SKIPPED",
-                    "reason.$": "$.pca_output.reason"
-                  }
-                }]
-              },
-              "End": true
-            },
-            "PublishResult": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::events:putEvents",
-              "Parameters": {
-                "Entries": [{
-                  "Source": "smartcare.agents.coa",
-                  "DetailType": "OutreachCompleted",
-                  "Detail": {
-                    "patient_id.$": "$.patient.patient_id",
-                    "coa_result.$": "$.coa_output.coa_result"
-                  }
-                }]
-              },
-              "End": true
+              }
             }
-          }
-        }
+          - PcaArn:
+              Fn::ImportValue: !Sub smartcare-${Environment}-pca-arn
+            CoaArn:
+              Fn::ImportValue: !Sub smartcare-${Environment}-coa-arn
       Tags:
         - Key: Project
           Value: SmartCare
-
-  # Placeholder — actual ARN refs need cross-stack
-  PCAFunctionArn:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub /smartcare/${Environment}/pca-function-arn
-      Type: String
-      Value:
-        Fn::ImportValue: !Sub smartcare-${Environment}-pca-arn
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Component
+          Value: StepFunctions
 
 Outputs:
   StateMachineArn:
