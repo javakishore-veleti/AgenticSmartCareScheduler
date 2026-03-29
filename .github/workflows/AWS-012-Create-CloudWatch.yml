@@ -19,6 +19,6 @@ jobs:
           aws cloudformation deploy \
             --stack-name "smartcare-cloudwatch" \
             --template-file infra/cfn-cloudwatch.yaml \
-            --capabilities CAPABILITY_IAM \
+            --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
           echo "CloudWatch log groups, dashboard, and alarms deployed."

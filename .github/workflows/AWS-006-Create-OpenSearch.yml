@@ -42,7 +42,7 @@ jobs:
           aws cloudformation deploy \
             --stack-name "smartcare-opensearch" \
             --template-file infra/cfn-opensearch.yaml \
-            --capabilities CAPABILITY_IAM \
+            --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
             $PARAMS
           echo "NOTE: OpenSearch takes 15-20 min to provision"

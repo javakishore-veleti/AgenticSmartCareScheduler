@@ -19,5 +19,5 @@ jobs:
           aws cloudformation deploy \
             --stack-name "smartcare-eventbridge" \
             --template-file infra/cfn-eventbridge.yaml \
-            --capabilities CAPABILITY_IAM \
+            --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset

@@ -46,7 +46,7 @@ jobs:
           aws cloudformation deploy \
             --stack-name "smartcare-lambda-agents" \
             --template-file infra/cfn-lambda-agents.yaml \
-            --capabilities CAPABILITY_IAM \
+            --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides \
               AgentToDeploy=$AGENT \
               EncryptionKey=${{ secrets.AGENTIC_SCS_AES_ENCRYPTION_KEY }} \

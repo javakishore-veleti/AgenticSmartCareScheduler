@@ -5,9 +5,6 @@ Parameters:
   Environment:
     Type: String
     Default: dev
-  AccountId:
-    Type: String
-    Default: !Ref AWS::AccountId
 
 Resources:
   DatasetBucket:
