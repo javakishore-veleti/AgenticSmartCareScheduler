@@ -24,6 +24,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
 
+      - name: Clean up failed stack if exists
+        run: |
+          STATUS=$(aws cloudformation describe-stacks --stack-name smartcare-opensearch \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+          if [[ "$STATUS" == *FAILED* ]] || [[ "$STATUS" == *ROLLBACK_COMPLETE* ]]; then
+            echo "Stack in $STATUS state — deleting before re-deploy..."
+            aws cloudformation delete-stack --stack-name smartcare-opensearch
+            aws cloudformation wait stack-delete-complete --stack-name smartcare-opensearch
+            echo "Deleted."
+          else
+            echo "Stack status: $STATUS — proceeding with deploy."
+          fi
       - name: Deploy OpenSearch Domain
         run: |
           VPC_ID="${{ inputs.vpc_id }}"
