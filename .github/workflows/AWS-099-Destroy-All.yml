@@ -67,8 +67,17 @@ on:
         type: boolean
         default: true
 
+# Destroy in waves — each wave runs in parallel, waves run sequentially.
+# Wave 1: top-level services (containers, cloudwatch, connect, healthlake, bedrock, opensearch)
+# Wave 2: orchestration + compute (stepfunctions, lambda)
+# Wave 3: messaging (eventbridge, sqs, sns)
+# Wave 4: data infra (rds, ecr)
+# Wave 5: networking (nat, s3, vpc)
+
 jobs:
-  destroy:
+  # === Wave 1: Top-level (no dependents) — all parallel ===
+  destroy-containers:
+    if: ${{ inputs.destroy_containers }}
     runs-on: ubuntu-latest
     steps:
       - uses: aws-actions/configure-aws-credentials@v5
@@ -76,60 +85,135 @@ jobs:
           aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - name: Destroy container stacks
+        run: |
+          for stack in smartcare-apprunner smartcare-ecs-fargate smartcare-ecs-fargate-spot; do
+            aws cloudformation delete-stack --stack-name "$stack" 2>/dev/null || true
+          done
+          for stack in smartcare-apprunner smartcare-ecs-fargate smartcare-ecs-fargate-spot; do
+            aws cloudformation wait stack-delete-complete --stack-name "$stack" 2>/dev/null || true
+          done
+          echo "Done: containers"
 
-      - name: Destroy stacks (reverse dependency order)
+  destroy-cloudwatch:
+    if: ${{ inputs.destroy_cloudwatch }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - run: |
+          aws cloudformation delete-stack --stack-name smartcare-cloudwatch 2>/dev/null || true
+          aws cloudformation wait stack-delete-complete --stack-name smartcare-cloudwatch 2>/dev/null || true
+
+  destroy-managed:
+    if: ${{ inputs.destroy_connect || inputs.destroy_healthlake || inputs.destroy_bedrock || inputs.destroy_opensearch }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - name: Destroy managed services (parallel deletes, then wait)
+        run: |
+          [ "${{ inputs.destroy_connect }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-connect 2>/dev/null || true
+          [ "${{ inputs.destroy_healthlake }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-healthlake 2>/dev/null || true
+          [ "${{ inputs.destroy_bedrock }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-bedrock-agent 2>/dev/null || true
+          [ "${{ inputs.destroy_opensearch }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-opensearch 2>/dev/null || true
+          [ "${{ inputs.destroy_connect }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-connect 2>/dev/null || true
+          [ "${{ inputs.destroy_healthlake }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-healthlake 2>/dev/null || true
+          [ "${{ inputs.destroy_bedrock }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-bedrock-agent 2>/dev/null || true
+          [ "${{ inputs.destroy_opensearch }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-opensearch 2>/dev/null || true
+          echo "Done: managed services"
+
+  # === Wave 2: Orchestration + compute (needs wave 1 done) ===
+  destroy-orchestration:
+    needs: [destroy-containers, destroy-cloudwatch]
+    if: ${{ always() && (inputs.destroy_stepfunctions || inputs.destroy_lambda) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - run: |
+          [ "${{ inputs.destroy_stepfunctions }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-step-functions 2>/dev/null || true
+          [ "${{ inputs.destroy_lambda }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-lambda-agents 2>/dev/null || true
+          [ "${{ inputs.destroy_stepfunctions }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-step-functions 2>/dev/null || true
+          [ "${{ inputs.destroy_lambda }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-lambda-agents 2>/dev/null || true
+          echo "Done: orchestration + compute"
+
+  # === Wave 3: Messaging (needs orchestration done) ===
+  destroy-messaging:
+    needs: [destroy-orchestration]
+    if: ${{ always() && (inputs.destroy_eventbridge || inputs.destroy_sqs || inputs.destroy_sns) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - run: |
+          [ "${{ inputs.destroy_eventbridge }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-eventbridge 2>/dev/null || true
+          [ "${{ inputs.destroy_eventbridge }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-eventbridge 2>/dev/null || true
+          [ "${{ inputs.destroy_sqs }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-sqs-queues 2>/dev/null || true
+          [ "${{ inputs.destroy_sqs }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-sqs-queues 2>/dev/null || true
+          [ "${{ inputs.destroy_sns }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-sns-topics 2>/dev/null || true
+          [ "${{ inputs.destroy_sns }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-sns-topics 2>/dev/null || true
+          echo "Done: messaging"
+
+  # === Wave 4: Data infra (needs containers + messaging done) ===
+  destroy-data-infra:
+    needs: [destroy-containers, destroy-messaging]
+    if: ${{ always() && (inputs.destroy_rds || inputs.destroy_ecr) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - name: Destroy RDS + ECR
         run: |
           ENV="dev"
-          destroy_stack() {
-            local name=$1
-            echo "Destroying $name..."
-            aws cloudformation delete-stack --stack-name "$name" 2>/dev/null || echo "  Stack $name not found"
-            aws cloudformation wait stack-delete-complete --stack-name "$name" 2>/dev/null || true
-            echo "  Done: $name"
-          }
+          # RDS
+          [ "${{ inputs.destroy_rds }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-rds 2>/dev/null || true
 
-          # 1. Container services
-          if [ "${{ inputs.destroy_containers }}" = "true" ]; then
-            destroy_stack "smartcare-apprunner"
-            destroy_stack "smartcare-ecs-fargate"
-            destroy_stack "smartcare-ecs-fargate-spot"
-          fi
-
-          # 2. Monitoring + managed services
-          [ "${{ inputs.destroy_cloudwatch }}" = "true" ] && destroy_stack "smartcare-cloudwatch"
-          [ "${{ inputs.destroy_connect }}" = "true" ] && destroy_stack "smartcare-connect"
-          [ "${{ inputs.destroy_healthlake }}" = "true" ] && destroy_stack "smartcare-healthlake"
-
-          # 3. Orchestration
-          [ "${{ inputs.destroy_stepfunctions }}" = "true" ] && destroy_stack "smartcare-step-functions"
-
-          # 4. Compute
-          [ "${{ inputs.destroy_lambda }}" = "true" ] && destroy_stack "smartcare-lambda-agents"
-          [ "${{ inputs.destroy_bedrock }}" = "true" ] && destroy_stack "smartcare-bedrock-agent"
-
-          # 5. Data
-          [ "${{ inputs.destroy_opensearch }}" = "true" ] && destroy_stack "smartcare-opensearch"
-
-          # 6. Messaging
-          [ "${{ inputs.destroy_eventbridge }}" = "true" ] && destroy_stack "smartcare-eventbridge"
-          [ "${{ inputs.destroy_sqs }}" = "true" ] && destroy_stack "smartcare-sqs-queues"
-          [ "${{ inputs.destroy_sns }}" = "true" ] && destroy_stack "smartcare-sns-topics"
-
-          # 7. RDS
-          [ "${{ inputs.destroy_rds }}" = "true" ] && destroy_stack "smartcare-rds"
-
-          # 8. ECR — force-delete repos first (CFN can't delete repos with images)
+          # ECR — force-delete repos first (CFN can't delete repos with images)
           if [ "${{ inputs.destroy_ecr }}" = "true" ]; then
-            echo "Force-deleting ECR repos (clearing images)..."
+            echo "Force-deleting ECR repos..."
             aws ecr delete-repository --repository-name "smartcare-app-web-${ENV}" --force 2>/dev/null || true
             aws ecr delete-repository --repository-name "smartcare-app-message-broker-${ENV}" --force 2>/dev/null || true
-            destroy_stack "smartcare-ecr"
+            aws cloudformation delete-stack --stack-name smartcare-ecr 2>/dev/null || true
           fi
 
-          # 9. NAT + VPC Endpoints
-          [ "${{ inputs.destroy_nat_endpoints }}" = "true" ] && destroy_stack "smartcare-nat-vpc-endpoints"
+          [ "${{ inputs.destroy_rds }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-rds 2>/dev/null || true
+          [ "${{ inputs.destroy_ecr }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-ecr 2>/dev/null || true
+          echo "Done: data infra"
 
-          # 10. S3 — empty bucket first
+  # === Wave 5: Networking foundation (needs everything above) ===
+  destroy-foundation:
+    needs: [destroy-data-infra, destroy-managed, destroy-messaging]
+    if: ${{ always() && (inputs.destroy_nat_endpoints || inputs.destroy_s3 || inputs.destroy_vpc) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AGENTIC_SCS_CLAIMS_PROC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
+      - name: Destroy NAT, S3, VPC
+        run: |
+          # NAT + VPC Endpoints
+          [ "${{ inputs.destroy_nat_endpoints }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-nat-vpc-endpoints 2>/dev/null || true
+          [ "${{ inputs.destroy_nat_endpoints }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-nat-vpc-endpoints 2>/dev/null || true
+
+          # S3 — empty bucket first
           if [ "${{ inputs.destroy_s3 }}" = "true" ]; then
             BUCKET=$(aws cloudformation describe-stacks --stack-name smartcare-s3-bucket \
               --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' --output text 2>/dev/null || echo "")
@@ -137,11 +221,12 @@ jobs:
               echo "Emptying S3 bucket $BUCKET..."
               aws s3 rm "s3://$BUCKET" --recursive 2>/dev/null || true
             fi
-            destroy_stack "smartcare-s3-bucket"
+            aws cloudformation delete-stack --stack-name smartcare-s3-bucket 2>/dev/null || true
+            aws cloudformation wait stack-delete-complete --stack-name smartcare-s3-bucket 2>/dev/null || true
           fi
 
-          # 11. VPC
-          [ "${{ inputs.destroy_vpc }}" = "true" ] && destroy_stack "smartcare-vpc"
+          # VPC (last — everything else depends on it)
+          [ "${{ inputs.destroy_vpc }}" = "true" ] && aws cloudformation delete-stack --stack-name smartcare-vpc 2>/dev/null || true
+          [ "${{ inputs.destroy_vpc }}" = "true" ] && aws cloudformation wait stack-delete-complete --stack-name smartcare-vpc 2>/dev/null || true
 
-          echo ""
-          echo "All selected stacks destroyed."
+          echo "Done: foundation"
