@@ -14,18 +14,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AGENTIC_SCS_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AGENTIC_SCS_AWS_REGION || 'us-east-1' }}
 
-      - name: Clean up failed stack if exists
+      - name: Clean up stale stack and orphaned repos
         run: |
+          ENV="dev"
           STATUS=$(aws cloudformation describe-stacks --stack-name smartcare-ecr \
             --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-          if [[ "$STATUS" == *FAILED* ]] || [[ "$STATUS" == *ROLLBACK_COMPLETE* ]]; then
-            echo "Stack in $STATUS state — deleting before re-deploy..."
-            aws cloudformation delete-stack --stack-name smartcare-ecr
-            aws cloudformation wait stack-delete-complete --stack-name smartcare-ecr
-            echo "Deleted."
-          else
-            echo "Stack status: $STATUS — proceeding with deploy."
+          echo "Stack status: $STATUS"
+
+          # Delete stack if in ANY non-complete state (FAILED, ROLLBACK_COMPLETE, REVIEW_IN_PROGRESS, DELETE_FAILED, etc.)
+          if [ "$STATUS" != "DOES_NOT_EXIST" ] && [ "$STATUS" != "CREATE_COMPLETE" ] && [ "$STATUS" != "UPDATE_COMPLETE" ]; then
+            echo "Stack in $STATUS state — deleting..."
+            aws cloudformation delete-stack --stack-name smartcare-ecr 2>/dev/null || true
+            aws cloudformation wait stack-delete-complete --stack-name smartcare-ecr 2>/dev/null || true
+            echo "Stack deleted."
           fi
+
+          # Clean up orphaned ECR repos (may exist outside CloudFormation)
+          for repo in "smartcare-app-web-${ENV}" "smartcare-app-message-broker-${ENV}"; do
+            if aws ecr describe-repositories --repository-names "$repo" 2>/dev/null >/dev/null; then
+              echo "Deleting orphaned ECR repo: $repo"
+              aws ecr delete-repository --repository-name "$repo" --force
+            fi
+          done
 
       - name: Deploy ECR
         run: |
@@ -33,5 +43,4 @@ jobs:
             --stack-name "smartcare-ecr" \
             --template-file DevOps/AWS/infra/cfn-ecr.yaml \
             --capabilities CAPABILITY_NAMED_IAM \
-            --no-fail-on-empty-changeset \
-            --tags Project=SmartCareScheduler Component=ECR
+            --no-fail-on-empty-changeset
