@@ -2,12 +2,10 @@ name: "AWS-099: Destroy All"
 on:
   workflow_dispatch:
     inputs:
-      # --- Container stack (destroy first) ---
       destroy_containers:
         description: "Destroy Container Services (App Runner / ECS)"
         type: boolean
         default: true
-      # --- Core services ---
       destroy_cloudwatch:
         description: "Destroy CloudWatch Monitoring"
         type: boolean
@@ -48,27 +46,26 @@ on:
         description: "Destroy SNS Topics"
         type: boolean
         default: true
-      # --- Data + infrastructure (destructive, default off) ---
       destroy_rds:
-        description: "Destroy RDS PostgreSQL (data loss!)"
+        description: "Destroy RDS PostgreSQL"
         type: boolean
-        default: false
+        default: true
       destroy_ecr:
-        description: "Destroy ECR Repositories (images lost!)"
+        description: "Destroy ECR Repositories"
         type: boolean
-        default: false
+        default: true
       destroy_nat_endpoints:
         description: "Destroy NAT Gateway + VPC Endpoints"
         type: boolean
-        default: false
+        default: true
       destroy_s3:
-        description: "Destroy S3 Bucket (data loss!)"
+        description: "Destroy S3 Bucket"
         type: boolean
-        default: false
+        default: true
       destroy_vpc:
-        description: "Destroy VPC (only if created by AWS-001 create_new)"
+        description: "Destroy VPC (only if created by AWS-001)"
         type: boolean
-        default: false
+        default: true
 
 jobs:
   destroy:
@@ -82,6 +79,7 @@ jobs:
 
       - name: Destroy stacks (reverse dependency order)
         run: |
+          ENV="dev"
           destroy_stack() {
             local name=$1
             echo "Destroying $name..."
@@ -90,7 +88,7 @@ jobs:
             echo "  Done: $name"
           }
 
-          # 1. Container services (top-level, depends on RDS/ECR/NAT)
+          # 1. Container services
           if [ "${{ inputs.destroy_containers }}" = "true" ]; then
             destroy_stack "smartcare-apprunner"
             destroy_stack "smartcare-ecs-fargate"
@@ -117,13 +115,32 @@ jobs:
           [ "${{ inputs.destroy_sqs }}" = "true" ] && destroy_stack "smartcare-sqs-queues"
           [ "${{ inputs.destroy_sns }}" = "true" ] && destroy_stack "smartcare-sns-topics"
 
-          # 7. Container infrastructure (default off)
+          # 7. RDS
           [ "${{ inputs.destroy_rds }}" = "true" ] && destroy_stack "smartcare-rds"
-          [ "${{ inputs.destroy_ecr }}" = "true" ] && destroy_stack "smartcare-ecr"
+
+          # 8. ECR — force-delete repos first (CFN can't delete repos with images)
+          if [ "${{ inputs.destroy_ecr }}" = "true" ]; then
+            echo "Force-deleting ECR repos (clearing images)..."
+            aws ecr delete-repository --repository-name "smartcare-app-web-${ENV}" --force 2>/dev/null || true
+            aws ecr delete-repository --repository-name "smartcare-app-message-broker-${ENV}" --force 2>/dev/null || true
+            destroy_stack "smartcare-ecr"
+          fi
+
+          # 9. NAT + VPC Endpoints
           [ "${{ inputs.destroy_nat_endpoints }}" = "true" ] && destroy_stack "smartcare-nat-vpc-endpoints"
 
-          # 8. Foundation (default off — destructive)
-          [ "${{ inputs.destroy_s3 }}" = "true" ] && destroy_stack "smartcare-s3-bucket"
+          # 10. S3 — empty bucket first
+          if [ "${{ inputs.destroy_s3 }}" = "true" ]; then
+            BUCKET=$(aws cloudformation describe-stacks --stack-name smartcare-s3-bucket \
+              --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' --output text 2>/dev/null || echo "")
+            if [ -n "$BUCKET" ] && [ "$BUCKET" != "None" ]; then
+              echo "Emptying S3 bucket $BUCKET..."
+              aws s3 rm "s3://$BUCKET" --recursive 2>/dev/null || true
+            fi
+            destroy_stack "smartcare-s3-bucket"
+          fi
+
+          # 11. VPC
           [ "${{ inputs.destroy_vpc }}" = "true" ] && destroy_stack "smartcare-vpc"
 
           echo ""
