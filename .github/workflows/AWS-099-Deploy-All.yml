@@ -163,13 +163,13 @@ jobs:
 
   build-docker:
     needs: [create-ecr]
-    if: ${{ always() && inputs.build_docker }}
+    if: ${{ inputs.build_docker && needs.create-ecr.result == 'success' }}
     uses: ./.github/workflows/AWS-015-Build-Push-Docker.yml
     secrets: inherit
 
   deploy-containers:
     needs: [create-rds, build-docker]
-    if: ${{ always() && inputs.deploy_containers }}
+    if: ${{ inputs.deploy_containers && needs.build-docker.result == 'success' }}
     uses: ./.github/workflows/AWS-018-Deploy-Containers.yml
     with:
       container_target: ${{ inputs.container_target }}

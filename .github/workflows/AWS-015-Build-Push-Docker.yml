@@ -39,8 +39,13 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='AppWebRepoUri'].OutputValue" --output text)
           BROKER_REPO=$(aws cloudformation describe-stacks --stack-name smartcare-ecr \
             --query "Stacks[0].Outputs[?OutputKey=='AppMessageBrokerRepoUri'].OutputValue" --output text)
+          if [ -z "$APP_WEB_REPO" ] || [ "$APP_WEB_REPO" = "None" ]; then
+            echo "ERROR: ECR stack not found or not ready. Run AWS-014-Create-ECR first."
+            exit 1
+          fi
           echo "app_web_repo=$APP_WEB_REPO" >> "$GITHUB_OUTPUT"
           echo "broker_repo=$BROKER_REPO" >> "$GITHUB_OUTPUT"
+          echo "ECR repos: $APP_WEB_REPO / $BROKER_REPO"
 
       - name: Build & Push app-web
         if: inputs.service == 'all' || inputs.service == 'app-web'
